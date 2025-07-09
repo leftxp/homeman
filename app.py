@@ -65,14 +65,18 @@ def save_settings():
                 settings_data[field] = settings_data[field].lower() == 'true'
         
         # 验证配置
-        if validator.validate_settings(settings_data):
-            yaml_manager.save_settings(settings_data)
-            flash('设置保存成功！', 'success')
+        is_valid, validation_msg = validator.validate_settings(settings_data)
+        if is_valid:
+            success, save_msg = yaml_manager.save_settings(settings_data)
+            if success:
+                flash('设置保存成功！', 'success')
+            else:
+                flash(f'保存失败：{save_msg}', 'error')
         else:
-            flash('设置验证失败，请检查输入！', 'error')
+            flash(f'设置验证失败：{validation_msg}', 'error')
             
     except Exception as e:
-        flash(f'保存失败：{str(e)}', 'error')
+        flash(f'保存异常：{str(e)}', 'error')
     
     return redirect(url_for('settings'))
 
@@ -89,14 +93,18 @@ def save_bookmarks():
         bookmarks_data = request.get_json()
         
         # 验证配置
-        if validator.validate_bookmarks(bookmarks_data):
-            yaml_manager.save_bookmarks(bookmarks_data)
-            return jsonify({'status': 'success', 'message': '书签保存成功！'})
+        is_valid, validation_msg = validator.validate_bookmarks(bookmarks_data)
+        if is_valid:
+            success, save_msg = yaml_manager.save_bookmarks(bookmarks_data)
+            if success:
+                return jsonify({'status': 'success', 'message': '书签保存成功！'})
+            else:
+                return jsonify({'status': 'error', 'message': f'保存失败：{save_msg}'})
         else:
-            return jsonify({'status': 'error', 'message': '书签验证失败！'})
+            return jsonify({'status': 'error', 'message': f'书签验证失败：{validation_msg}'})
             
     except Exception as e:
-        return jsonify({'status': 'error', 'message': f'保存失败：{str(e)}'})
+        return jsonify({'status': 'error', 'message': f'保存异常：{str(e)}'})
 
 @app.route('/services')
 def services():
@@ -149,13 +157,15 @@ def save_services():
                     break
         
         # 验证并保存
-        if validator.validate_services(current_services):
-            if yaml_manager.save_services(current_services):
+        is_valid, validation_msg = validator.validate_services(current_services)
+        if is_valid:
+            success, save_msg = yaml_manager.save_services(current_services)
+            if success:
                 return jsonify({'success': True, 'message': '服务保存成功！'})
             else:
-                return jsonify({'success': False, 'error': '配置保存失败'})
+                return jsonify({'success': False, 'error': f'配置保存失败：{save_msg}'})
         else:
-            return jsonify({'success': False, 'error': '服务配置验证失败'})
+            return jsonify({'success': False, 'error': f'服务配置验证失败：{validation_msg}'})
             
     except Exception as e:
         return jsonify({'success': False, 'error': f'保存失败：{str(e)}'})
@@ -176,10 +186,11 @@ def delete_service():
                                    if service_name not in service]
                 break
         
-        if yaml_manager.save_services(current_services):
+        success, save_msg = yaml_manager.save_services(current_services)
+        if success:
             return jsonify({'success': True, 'message': '服务删除成功！'})
         else:
-            return jsonify({'success': False, 'error': '删除失败'})
+            return jsonify({'success': False, 'error': f'删除失败：{save_msg}'})
             
     except Exception as e:
         return jsonify({'success': False, 'error': f'删除失败：{str(e)}'})
@@ -207,10 +218,11 @@ def save_service_group():
                     group[group_name] = group_services
                     break
         
-        if yaml_manager.save_services(current_services):
+        success, save_msg = yaml_manager.save_services(current_services)
+        if success:
             return jsonify({'success': True, 'message': '分组保存成功！'})
         else:
-            return jsonify({'success': False, 'error': '保存失败'})
+            return jsonify({'success': False, 'error': f'保存失败：{save_msg}'})
             
     except Exception as e:
         return jsonify({'success': False, 'error': f'保存失败：{str(e)}'})
@@ -225,10 +237,11 @@ def delete_service_group():
         current_services = yaml_manager.load_services()
         current_services = [group for group in current_services if group_name not in group]
         
-        if yaml_manager.save_services(current_services):
+        success, save_msg = yaml_manager.save_services(current_services)
+        if success:
             return jsonify({'success': True, 'message': '分组删除成功！'})
         else:
-            return jsonify({'success': False, 'error': '删除失败'})
+            return jsonify({'success': False, 'error': f'删除失败：{save_msg}'})
             
     except Exception as e:
         return jsonify({'success': False, 'error': f'删除失败：{str(e)}'})
@@ -259,13 +272,15 @@ def save_docker():
                 current_config[instance_name] = config
         
         # 验证配置
-        if validator.validate_docker(current_config):
-            if yaml_manager.save_docker(current_config):
+        is_valid, validation_msg = validator.validate_docker(current_config)
+        if is_valid:
+            success, save_msg = yaml_manager.save_docker(current_config)
+            if success:
                 return jsonify({'success': True, 'message': 'Docker 配置保存成功！'})
             else:
-                return jsonify({'success': False, 'error': '配置保存失败'})
+                return jsonify({'success': False, 'error': f'配置保存失败：{save_msg}'})
         else:
-            return jsonify({'success': False, 'error': 'Docker 配置验证失败'})
+            return jsonify({'success': False, 'error': f'Docker 配置验证失败：{validation_msg}'})
             
     except Exception as e:
         return jsonify({'success': False, 'error': f'保存失败：{str(e)}'})
@@ -344,13 +359,15 @@ def save_widgets():
             current_widgets[widget_name] = widget_data
         
         # 验证并保存
-        if validator.validate_widgets(current_widgets):
-            if yaml_manager.save_widgets(current_widgets):
+        is_valid, validation_msg = validator.validate_widgets(current_widgets)
+        if is_valid:
+            success, save_msg = yaml_manager.save_widgets(current_widgets)
+            if success:
                 return jsonify({'success': True, 'message': '小工具保存成功！'})
             else:
-                return jsonify({'success': False, 'error': '配置保存失败'})
+                return jsonify({'success': False, 'error': f'配置保存失败：{save_msg}'})
         else:
-            return jsonify({'success': False, 'error': '小工具配置验证失败'})
+            return jsonify({'success': False, 'error': f'小工具配置验证失败：{validation_msg}'})
             
     except Exception as e:
         return jsonify({'success': False, 'error': f'保存失败：{str(e)}'})
@@ -367,10 +384,11 @@ def delete_widget():
         if widget_name in current_widgets:
             del current_widgets[widget_name]
         
-        if yaml_manager.save_widgets(current_widgets):
+        success, save_msg = yaml_manager.save_widgets(current_widgets)
+        if success:
             return jsonify({'success': True, 'message': '小工具删除成功！'})
         else:
-            return jsonify({'success': False, 'error': '删除失败'})
+            return jsonify({'success': False, 'error': f'删除失败：{save_msg}'})
             
     except Exception as e:
         return jsonify({'success': False, 'error': f'删除失败：{str(e)}'})
@@ -427,17 +445,23 @@ def backup_config():
     """备份配置文件或获取备份信息"""
     if request.method == 'POST':
         try:
-            backup_path = yaml_manager.backup_configs()
-            return jsonify({'success': True, 'backup_path': backup_path})
+            backup_path, backup_msg = yaml_manager.backup_configs()
+            if backup_path:
+                return jsonify({'success': True, 'backup_path': backup_path, 'message': backup_msg})
+            else:
+                return jsonify({'success': False, 'error': backup_msg})
         except Exception as e:
-            return jsonify({'success': False, 'error': str(e)})
+            return jsonify({'success': False, 'error': f'备份异常：{str(e)}'})
     else:
         # GET 请求返回备份列表（保持兼容性）
         try:
-            backup_path = yaml_manager.backup_configs()
-            return jsonify({'status': 'success', 'backup_path': backup_path})
+            backup_path, backup_msg = yaml_manager.backup_configs()
+            if backup_path:
+                return jsonify({'status': 'success', 'backup_path': backup_path, 'message': backup_msg})
+            else:
+                return jsonify({'status': 'error', 'message': backup_msg})
         except Exception as e:
-            return jsonify({'status': 'error', 'message': str(e)})
+            return jsonify({'status': 'error', 'message': f'备份异常：{str(e)}'})
 
 @app.route('/api/backup', methods=['DELETE'])
 def delete_backup():
@@ -469,12 +493,14 @@ def restore_backup():
         request_data = request.get_json()
         backup_name = request_data.get('backup_name')
         
-        if yaml_manager.restore_backup(backup_name):
-            return jsonify({'success': True, 'message': '配置恢复成功'})
+        backup_path = yaml_manager.get_backup_path(backup_name)
+        success, restore_msg = yaml_manager.restore_configs(backup_path)
+        if success:
+            return jsonify({'success': True, 'message': f'配置恢复成功：{restore_msg}'})
         else:
-            return jsonify({'success': False, 'error': '恢复失败'})
+            return jsonify({'success': False, 'error': f'恢复失败：{restore_msg}'})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        return jsonify({'success': False, 'error': f'恢复异常：{str(e)}'})
 
 @app.route('/api/download/configs')
 def download_all_configs():

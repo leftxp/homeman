@@ -1,8 +1,13 @@
 import yaml
 import os
 import shutil
+import logging
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
+
+# 配置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 class YamlManager:
     """Homepage YAML 配置文件管理器"""
@@ -17,31 +22,75 @@ class YamlManager:
         self.backup_dir = os.path.join(config_path, 'backups')
         
         # 确保目录存在
-        os.makedirs(config_path, exist_ok=True)
-        os.makedirs(self.backup_dir, exist_ok=True)
+        try:
+            os.makedirs(config_path, exist_ok=True)
+            os.makedirs(self.backup_dir, exist_ok=True)
+            logger.info(f"Initialized YamlManager with config path: {config_path}")
+        except Exception as e:
+            logger.error(f"Failed to create directories: {e}")
+            raise
     
     def _load_yaml_file(self, file_path: str) -> Dict[str, Any]:
         """加载 YAML 文件"""
         try:
             if os.path.exists(file_path):
+                logger.info(f"Loading YAML file: {file_path}")
                 with open(file_path, 'r', encoding='utf-8') as f:
                     data = yaml.safe_load(f)
-                    return data if data is not None else {}
+                    result = data if data is not None else {}
+                    logger.info(f"Successfully loaded {file_path}, data size: {len(result) if isinstance(result, (dict, list)) else 'N/A'}")
+                    return result
+            else:
+                logger.warning(f"YAML file does not exist: {file_path}")
+                return {}
+        except yaml.YAMLError as e:
+            logger.error(f"YAML parsing error in {file_path}: {e}")
+            return {}
+        except UnicodeDecodeError as e:
+            logger.error(f"Encoding error in {file_path}: {e}")
             return {}
         except Exception as e:
-            print(f"Error loading {file_path}: {e}")
+            logger.error(f"Unexpected error loading {file_path}: {e}")
             return {}
     
-    def _save_yaml_file(self, file_path: str, data: Dict[str, Any]) -> bool:
-        """保存 YAML 文件"""
+    def _save_yaml_file(self, file_path: str, data: Dict[str, Any]) -> Tuple[bool, str]:
+        """保存 YAML 文件，返回(成功状态, 错误信息)"""
         try:
+            logger.info(f"Saving YAML file: {file_path}")
+            
+            # 创建备份
+            if os.path.exists(file_path):
+                backup_path = f"{file_path}.backup"
+                shutil.copy2(file_path, backup_path)
+                logger.info(f"Created backup: {backup_path}")
+            
+            # 保存文件
             with open(file_path, 'w', encoding='utf-8') as f:
                 yaml.dump(data, f, default_flow_style=False, allow_unicode=True, 
                          indent=2, sort_keys=False)
-            return True
+            
+            # 验证保存结果
+            if os.path.exists(file_path):
+                file_size = os.path.getsize(file_path)
+                logger.info(f"Successfully saved {file_path}, file size: {file_size} bytes")
+                return True, "保存成功"
+            else:
+                error_msg = f"文件保存后不存在: {file_path}"
+                logger.error(error_msg)
+                return False, error_msg
+                
+        except yaml.YAMLError as e:
+            error_msg = f"YAML 序列化错误: {e}"
+            logger.error(f"YAML error saving {file_path}: {e}")
+            return False, error_msg
+        except IOError as e:
+            error_msg = f"文件写入错误: {e}"
+            logger.error(f"IO error saving {file_path}: {e}")
+            return False, error_msg
         except Exception as e:
-            print(f"Error saving {file_path}: {e}")
-            return False
+            error_msg = f"未知错误: {e}"
+            logger.error(f"Unexpected error saving {file_path}: {e}")
+            return False, error_msg
     
     def load_settings(self) -> Dict[str, Any]:
         """加载全局设置"""
@@ -73,10 +122,12 @@ class YamlManager:
         
         return settings
     
-    def save_settings(self, settings: Dict[str, Any]) -> bool:
-        """保存全局设置"""
+    def save_settings(self, settings: Dict[str, Any]) -> Tuple[bool, str]:
+        """保存全局设置，返回(成功状态, 错误信息)"""
+        logger.info(f"Saving settings with {len(settings)} keys")
         # 清理空值
         clean_settings = {k: v for k, v in settings.items() if v != '' and v is not None}
+        logger.info(f"Cleaned settings, {len(clean_settings)} keys remaining")
         return self._save_yaml_file(self.settings_file, clean_settings)
     
     def load_bookmarks(self) -> list:
@@ -86,8 +137,9 @@ class YamlManager:
             return bookmarks
         return []
     
-    def save_bookmarks(self, bookmarks: list) -> bool:
-        """保存书签配置"""
+    def save_bookmarks(self, bookmarks: list) -> Tuple[bool, str]:
+        """保存书签配置，返回(成功状态, 错误信息)"""
+        logger.info(f"Saving bookmarks with {len(bookmarks)} groups")
         return self._save_yaml_file(self.bookmarks_file, bookmarks)
     
     def load_services(self) -> list:
@@ -97,16 +149,18 @@ class YamlManager:
             return services
         return []
     
-    def save_services(self, services: list) -> bool:
-        """保存服务配置"""
+    def save_services(self, services: list) -> Tuple[bool, str]:
+        """保存服务配置，返回(成功状态, 错误信息)"""
+        logger.info(f"Saving services with {len(services)} groups")
         return self._save_yaml_file(self.services_file, services)
     
     def load_widgets(self) -> Dict[str, Any]:
         """加载小工具配置"""
         return self._load_yaml_file(self.widgets_file)
     
-    def save_widgets(self, widgets: Dict[str, Any]) -> bool:
-        """保存小工具配置"""
+    def save_widgets(self, widgets: Dict[str, Any]) -> Tuple[bool, str]:
+        """保存小工具配置，返回(成功状态, 错误信息)"""
+        logger.info(f"Saving widgets with {len(widgets)} items")
         return self._save_yaml_file(self.widgets_file, widgets)
     
     def load_docker(self) -> Dict[str, Any]:
@@ -125,8 +179,9 @@ class YamlManager:
         
         return docker_config
     
-    def save_docker(self, docker_config: Dict[str, Any]) -> bool:
-        """保存 Docker 配置"""
+    def save_docker(self, docker_config: Dict[str, Any]) -> Tuple[bool, str]:
+        """保存 Docker 配置，返回(成功状态, 错误信息)"""
+        logger.info(f"Saving docker config with {len(docker_config)} instances")
         return self._save_yaml_file(self.docker_file, docker_config)
     
     def get_config_status(self) -> Dict[str, Any]:
@@ -157,32 +212,51 @@ class YamlManager:
         
         return status
     
-    def backup_configs(self) -> str:
-        """备份所有配置文件"""
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        backup_path = os.path.join(self.backup_dir, f'backup_{timestamp}')
-        os.makedirs(backup_path, exist_ok=True)
-        
-        files_to_backup = [
-            self.settings_file,
-            self.bookmarks_file,
-            self.services_file,
-            self.widgets_file,
-            self.docker_file
-        ]
-        
-        for file_path in files_to_backup:
-            if os.path.exists(file_path):
-                filename = os.path.basename(file_path)
-                shutil.copy2(file_path, os.path.join(backup_path, filename))
-        
-        return backup_path
-    
-    def restore_configs(self, backup_path: str) -> bool:
-        """从备份恢复配置文件"""
+    def backup_configs(self) -> Tuple[str, str]:
+        """备份所有配置文件，返回(备份路径, 错误信息)"""
         try:
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            backup_path = os.path.join(self.backup_dir, f'backup_{timestamp}')
+            logger.info(f"Creating backup at: {backup_path}")
+            
+            os.makedirs(backup_path, exist_ok=True)
+            
+            files_to_backup = [
+                self.settings_file,
+                self.bookmarks_file,
+                self.services_file,
+                self.widgets_file,
+                self.docker_file
+            ]
+            
+            backed_up_files = 0
+            for file_path in files_to_backup:
+                if os.path.exists(file_path):
+                    filename = os.path.basename(file_path)
+                    destination = os.path.join(backup_path, filename)
+                    shutil.copy2(file_path, destination)
+                    backed_up_files += 1
+                    logger.info(f"Backed up: {filename}")
+                else:
+                    logger.warning(f"File not found for backup: {file_path}")
+            
+            logger.info(f"Backup completed: {backed_up_files} files backed up")
+            return backup_path, f"成功备份 {backed_up_files} 个文件"
+            
+        except Exception as e:
+            error_msg = f"备份失败: {e}"
+            logger.error(f"Backup failed: {e}")
+            return "", error_msg
+    
+    def restore_configs(self, backup_path: str) -> Tuple[bool, str]:
+        """从备份恢复配置文件，返回(成功状态, 错误信息)"""
+        try:
+            logger.info(f"Restoring configs from: {backup_path}")
+            
             if not os.path.exists(backup_path):
-                return False
+                error_msg = f"备份路径不存在: {backup_path}"
+                logger.error(error_msg)
+                return False, error_msg
             
             files_to_restore = [
                 'settings.yaml',
@@ -192,16 +266,29 @@ class YamlManager:
                 'docker.yaml'
             ]
             
+            restored_files = 0
             for filename in files_to_restore:
                 backup_file = os.path.join(backup_path, filename)
                 if os.path.exists(backup_file):
                     target_file = os.path.join(self.config_path, filename)
                     shutil.copy2(backup_file, target_file)
+                    restored_files += 1
+                    logger.info(f"Restored: {filename}")
+                else:
+                    logger.warning(f"Backup file not found: {backup_file}")
             
-            return True
+            if restored_files > 0:
+                logger.info(f"Restore completed: {restored_files} files restored")
+                return True, f"成功恢复 {restored_files} 个文件"
+            else:
+                error_msg = "没有找到可恢复的配置文件"
+                logger.warning(error_msg)
+                return False, error_msg
+                
         except Exception as e:
-            print(f"Error restoring configs: {e}")
-            return False
+            error_msg = f"恢复失败: {e}"
+            logger.error(f"Error restoring configs: {e}")
+            return False, error_msg
 
     def list_backups(self) -> list:
         """获取备份列表"""
@@ -237,14 +324,15 @@ class YamlManager:
             print(f"Error deleting backup: {e}")
             return False
 
-    def restore_backup(self, backup_name: str) -> bool:
-        """按名称恢复备份"""
+    def restore_backup(self, backup_name: str) -> Tuple[bool, str]:
+        """按名称恢复备份，返回(成功状态, 错误信息)"""
         try:
             backup_path = os.path.join(self.backup_dir, backup_name)
             return self.restore_configs(backup_path)
         except Exception as e:
-            print(f"Error restoring backup: {e}")
-            return False
+            error_msg = f"恢复备份异常: {e}"
+            logger.error(error_msg)
+            return False, error_msg
 
     def get_backup_path(self, backup_name: str) -> str:
         """获取备份路径"""
