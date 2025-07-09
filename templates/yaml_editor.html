@@ -354,10 +354,7 @@ function initializeEditor() {
     });
 
     // 监听内容变化
-    editor.on('change', function() {
-        updateSyntaxStatus();
-        markAsModified();
-    });
+    editor.on('change', onEditorChange);
 }
 
 function switchToConfig(configType) {
@@ -383,8 +380,10 @@ function switchToConfig(configType) {
         
         // 如果已经加载过，直接显示
         if (configContents[configType] !== undefined && editor) {
-            editor.setValue(configContents[configType]);
+            // 暂时禁用change事件，避免误标记为修改
+            setEditorContent(configContents[configType]);
             originalContent = configContents[configType];
+            configModified[configType] = false; // 确保重置修改状态
             updateFileInfo(configType);
             updateModifiedStatus();
             return;
@@ -417,7 +416,8 @@ function loadConfig(configType) {
         })
         .then(data => {
             if (data.success && editor) {
-                editor.setValue(data.content);
+                // 暂时禁用change事件，避免误标记为修改
+                setEditorContent(data.content);
                 originalContent = data.content;
                 configContents[configType] = data.content;
                 configModified[configType] = false;
@@ -511,7 +511,8 @@ function resetEditor() {
     
     if (originalContent !== editor.getValue()) {
         if (confirm('当前有未保存的更改，确定要重置吗？')) {
-            editor.setValue(originalContent);
+            // 暂时禁用change事件，避免误标记为修改
+            setEditorContent(originalContent);
             configContents[currentConfigType] = originalContent;
             configModified[currentConfigType] = false;
             updateModifiedStatus();
@@ -519,6 +520,26 @@ function resetEditor() {
     } else {
         showMessage('没有需要重置的更改', 'info');
     }
+}
+
+// 设置编辑器内容但不触发change事件
+function setEditorContent(content) {
+    if (!editor) return;
+    
+    // 暂时移除change事件监听
+    editor.off('change', onEditorChange);
+    
+    // 设置内容
+    editor.setValue(content);
+    
+    // 重新添加change事件监听
+    editor.on('change', onEditorChange);
+}
+
+// change事件处理函数
+function onEditorChange() {
+    updateSyntaxStatus();
+    markAsModified();
 }
 
 function markAsModified() {
