@@ -402,3 +402,136 @@ class YamlManager:
         except Exception as e:
             print(f"Error creating backup zip: {e}")
             return None 
+
+    def load_raw_yaml_file(self, config_name: str) -> Tuple[str, str]:
+        """加载原始 YAML 文件内容，返回(文件内容, 错误信息)"""
+        try:
+            file_path = self.get_config_file_path(config_name)
+            if not file_path:
+                return "", f"未知的配置类型: {config_name}"
+            
+            if os.path.exists(file_path):
+                logger.info(f"Loading raw YAML file: {file_path}")
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    logger.info(f"Successfully loaded raw content from {file_path}, length: {len(content)}")
+                    return content, ""
+            else:
+                logger.warning(f"Raw YAML file does not exist: {file_path}")
+                # 为不存在的文件返回默认内容
+                default_content = self._get_default_yaml_content(config_name)
+                return default_content, ""
+                
+        except UnicodeDecodeError as e:
+            error_msg = f"文件编码错误: {e}"
+            logger.error(f"Encoding error reading {file_path}: {e}")
+            return "", error_msg
+        except Exception as e:
+            error_msg = f"读取文件失败: {e}"
+            logger.error(f"Unexpected error reading {file_path}: {e}")
+            return "", error_msg
+
+    def save_raw_yaml_file(self, config_name: str, content: str) -> Tuple[bool, str]:
+        """保存原始 YAML 文件内容，返回(成功状态, 错误信息)"""
+        try:
+            file_path = self.get_config_file_path(config_name)
+            if not file_path:
+                return False, f"未知的配置类型: {config_name}"
+            
+            logger.info(f"Saving raw YAML file: {file_path}")
+            
+            # 验证 YAML 语法
+            try:
+                yaml.safe_load(content)
+            except yaml.YAMLError as e:
+                error_msg = f"YAML 语法错误: {e}"
+                logger.error(f"YAML syntax error: {e}")
+                return False, error_msg
+            
+            # 创建备份
+            if os.path.exists(file_path):
+                backup_path = f"{file_path}.backup"
+                shutil.copy2(file_path, backup_path)
+                logger.info(f"Created backup: {backup_path}")
+            
+            # 保存文件
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+            
+            # 验证保存结果
+            if os.path.exists(file_path):
+                file_size = os.path.getsize(file_path)
+                logger.info(f"Successfully saved raw content to {file_path}, file size: {file_size} bytes")
+                return True, "保存成功"
+            else:
+                error_msg = f"文件保存后不存在: {file_path}"
+                logger.error(error_msg)
+                return False, error_msg
+                
+        except IOError as e:
+            error_msg = f"文件写入错误: {e}"
+            logger.error(f"IO error saving {file_path}: {e}")
+            return False, error_msg
+        except Exception as e:
+            error_msg = f"保存失败: {e}"
+            logger.error(f"Unexpected error saving {file_path}: {e}")
+            return False, error_msg
+
+    def _get_default_yaml_content(self, config_name: str) -> str:
+        """获取默认的 YAML 文件内容"""
+        defaults = {
+            'settings': """# Homepage 全局设置
+title: "Homepage"
+startUrl: "/"
+theme: "light"
+color: "slate"
+headerStyle: "underlined"
+language: "zh-cn"
+hideVersion: false
+showStats: false
+target: "_self"
+""",
+            'bookmarks': """# Homepage 书签配置
+# 示例：
+# - 开发工具:
+#     - Github:
+#         - href: https://github.com
+#           icon: github
+""",
+            'services': """# Homepage 服务配置
+# 示例：
+# - 系统监控:
+#     - 服务器状态:
+#         href: http://localhost:3000
+#         description: 服务器监控面板
+#         icon: server
+""",
+            'widgets': """# Homepage 小工具配置
+# 示例：
+# - resources:
+#     label: 系统资源
+#     cpu: true
+#     memory: true
+""",
+            'docker': """# Homepage Docker 配置
+# 示例：
+# my-docker:
+#   socket: /var/run/docker.sock
+#   showStats: true
+"""
+        }
+        return defaults.get(config_name, "# 新的配置文件\n")
+
+    def get_supported_config_types(self) -> list:
+        """获取支持的配置文件类型"""
+        return ['settings', 'bookmarks', 'services', 'widgets', 'docker']
+
+    def validate_yaml_syntax(self, content: str) -> Tuple[bool, str]:
+        """验证 YAML 语法，返回(是否有效, 错误信息)"""
+        try:
+            yaml.safe_load(content)
+            return True, ""
+        except yaml.YAMLError as e:
+            return False, f"YAML 语法错误: {e}"
+        except Exception as e:
+            return False, f"验证失败: {e}" 

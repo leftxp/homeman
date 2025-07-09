@@ -536,6 +536,104 @@ def download_backup(backup_name):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/yaml-editor')
+def yaml_editor():
+    """YAML 编辑器页面"""
+    config_types = yaml_manager.get_supported_config_types()
+    config_status = yaml_manager.get_config_status()
+    return render_template('yaml_editor.html', 
+                         config_types=config_types, 
+                         config_status=config_status)
+
+@app.route('/api/yaml/load/<config_name>')
+def load_yaml_content(config_name):
+    """加载原始 YAML 文件内容"""
+    try:
+        if config_name not in yaml_manager.get_supported_config_types():
+            return jsonify({'success': False, 'error': f'不支持的配置类型: {config_name}'}), 400
+        
+        content, error_msg = yaml_manager.load_raw_yaml_file(config_name)
+        if error_msg:
+            return jsonify({'success': False, 'error': error_msg}), 500
+        
+        return jsonify({
+            'success': True, 
+            'content': content,
+            'config_name': config_name
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'加载失败: {str(e)}'}), 500
+
+@app.route('/api/yaml/save/<config_name>', methods=['POST'])
+def save_yaml_content(config_name):
+    """保存原始 YAML 文件内容"""
+    try:
+        if config_name not in yaml_manager.get_supported_config_types():
+            return jsonify({'success': False, 'error': f'不支持的配置类型: {config_name}'}), 400
+        
+        request_data = request.get_json()
+        content = request_data.get('content', '')
+        
+        if not content.strip():
+            return jsonify({'success': False, 'error': '文件内容不能为空'}), 400
+        
+        # 保存文件
+        success, save_msg = yaml_manager.save_raw_yaml_file(config_name, content)
+        if success:
+            return jsonify({'success': True, 'message': save_msg})
+        else:
+            return jsonify({'success': False, 'error': save_msg}), 400
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'保存失败: {str(e)}'}), 500
+
+@app.route('/api/yaml/validate', methods=['POST'])
+def validate_yaml_content():
+    """验证 YAML 语法"""
+    try:
+        request_data = request.get_json()
+        content = request_data.get('content', '')
+        
+        is_valid, error_msg = yaml_manager.validate_yaml_syntax(content)
+        
+        return jsonify({
+            'success': True,
+            'valid': is_valid,
+            'error': error_msg if not is_valid else None
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'验证失败: {str(e)}'}), 500
+
+@app.route('/api/yaml/preview/<config_name>', methods=['POST'])
+def preview_yaml_config(config_name):
+    """预览 YAML 配置解析结果"""
+    try:
+        if config_name not in yaml_manager.get_supported_config_types():
+            return jsonify({'success': False, 'error': f'不支持的配置类型: {config_name}'}), 400
+        
+        request_data = request.get_json()
+        content = request_data.get('content', '')
+        
+        # 验证语法
+        is_valid, error_msg = yaml_manager.validate_yaml_syntax(content)
+        if not is_valid:
+            return jsonify({'success': False, 'error': error_msg}), 400
+        
+        # 解析配置
+        import yaml
+        parsed_data = yaml.safe_load(content)
+        
+        return jsonify({
+            'success': True,
+            'parsed_data': parsed_data,
+            'type': type(parsed_data).__name__
+        })
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'预览失败: {str(e)}'}), 500
+
 if __name__ == '__main__':
     # 确保配置目录存在
     os.makedirs(HOMEPAGE_CONFIG_PATH, exist_ok=True)
