@@ -165,30 +165,67 @@ class ConfigValidator:
                         return False, error_msg
                     
                     bookmark_name = list(item.keys())[0]
-                    bookmark_data = item[bookmark_name]
+                    bookmark_config = item[bookmark_name]
                     
-                    if not isinstance(bookmark_data, dict):
-                        error_msg = f"书签 '{bookmark_name}' 的配置必须是字典格式，当前类型: {type(bookmark_data).__name__}"
+                    # 书签配置应该是一个列表，包含配置字典
+                    if not isinstance(bookmark_config, list):
+                        error_msg = f"书签 '{bookmark_name}' 的配置必须是列表格式，当前类型: {type(bookmark_config).__name__}"
                         logger.warning(error_msg)
                         return False, error_msg
                     
-                    # 验证必需字段
-                    if 'href' not in bookmark_data:
-                        error_msg = f"书签 '{bookmark_name}' 缺少必需的 'href' 字段"
+                    # 列表不能为空
+                    if not bookmark_config:
+                        error_msg = f"书签 '{bookmark_name}' 的配置列表不能为空"
                         logger.warning(error_msg)
                         return False, error_msg
                     
-                    # 验证 URL
-                    if not self._validate_url(bookmark_data['href']):
-                        error_msg = f"书签 '{bookmark_name}' 的URL格式无效: {bookmark_data['href']}"
-                        logger.warning(error_msg)
-                        return False, error_msg
-                    
-                    # 验证可选字段
-                    if 'abbr' in bookmark_data and len(bookmark_data['abbr']) > 2:
-                        error_msg = f"书签 '{bookmark_name}' 的缩写长度不能超过2个字符，当前: {bookmark_data['abbr']}"
-                        logger.warning(error_msg)
-                        return False, error_msg
+                    # 验证配置列表中的每个配置项
+                    for config_index, config_item in enumerate(bookmark_config):
+                        if not isinstance(config_item, dict):
+                            error_msg = f"书签 '{bookmark_name}' 的配置项 #{config_index + 1} 必须是字典格式，当前类型: {type(config_item).__name__}"
+                            logger.warning(error_msg)
+                            return False, error_msg
+                        
+                        # 验证必需字段
+                        if 'href' not in config_item:
+                            error_msg = f"书签 '{bookmark_name}' 的配置项 #{config_index + 1} 缺少必需的 'href' 字段"
+                            logger.warning(error_msg)
+                            return False, error_msg
+                        
+                        # 验证 URL
+                        if not self._validate_url(config_item['href']):
+                            error_msg = f"书签 '{bookmark_name}' 的配置项 #{config_index + 1} URL格式无效: {config_item['href']}"
+                            logger.warning(error_msg)
+                            return False, error_msg
+                        
+                        # 验证可选字段
+                        if 'abbr' in config_item:
+                            if not isinstance(config_item['abbr'], str):
+                                error_msg = f"书签 '{bookmark_name}' 的配置项 #{config_index + 1} abbr 必须是字符串，当前类型: {type(config_item['abbr']).__name__}"
+                                logger.warning(error_msg)
+                                return False, error_msg
+                            if len(config_item['abbr']) > 2:
+                                error_msg = f"书签 '{bookmark_name}' 的配置项 #{config_index + 1} 缩写长度不能超过2个字符，当前: {config_item['abbr']}"
+                                logger.warning(error_msg)
+                                return False, error_msg
+                        
+                        # 验证其他可选字段
+                        if 'description' in config_item and not isinstance(config_item['description'], str):
+                            error_msg = f"书签 '{bookmark_name}' 的配置项 #{config_index + 1} description 必须是字符串，当前类型: {type(config_item['description']).__name__}"
+                            logger.warning(error_msg)
+                            return False, error_msg
+                        
+                        if 'icon' in config_item and not isinstance(config_item['icon'], str):
+                            error_msg = f"书签 '{bookmark_name}' 的配置项 #{config_index + 1} icon 必须是字符串，当前类型: {type(config_item['icon']).__name__}"
+                            logger.warning(error_msg)
+                            return False, error_msg
+                        
+                        # 验证链接目标
+                        if 'target' in config_item:
+                            if config_item['target'] not in self.valid_targets:
+                                error_msg = f"书签 '{bookmark_name}' 的配置项 #{config_index + 1} 链接目标无效: {config_item['target']}，支持的目标: {', '.join(self.valid_targets)}"
+                                logger.warning(error_msg)
+                                return False, error_msg
             
             logger.info("Bookmarks validation passed")
             return True, "验证通过"
