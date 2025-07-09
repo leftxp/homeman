@@ -1,0 +1,5 @@
+---
+description: 日志规范
+alwaysApply: false
+---
+1、涉及修改并保存配置文件的操作，需要在服务端打印相关日志。

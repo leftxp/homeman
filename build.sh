@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Homeman Docker 构建脚本
+# Homeman Docker 构建脚本 (Linux/macOS)
 
 set -e
 
@@ -9,6 +9,8 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # 版本信息
@@ -25,7 +27,8 @@ if ! command -v docker &> /dev/null; then
 fi
 
 # 构建选项
-echo -e "${YELLOW}选择构建类型:${NC}"
+echo
+echo -e "${YELLOW}🏗️ 选择构建类型:${NC}"
 echo "1) 基础构建 (开发/测试)"
 echo "2) 优化构建 (生产环境)"
 echo "3) 多架构构建 (AMD64 + ARM64)"
@@ -55,7 +58,8 @@ if docker images | grep -q "${IMAGE_NAME}.*${VERSION}"; then
     echo -e "${GREEN}✅ 构建成功！${NC}"
     
     # 显示镜像信息
-    echo -e "${BLUE}📊 镜像信息:${NC}"
+    echo
+    echo -e "${CYAN}📊 镜像信息:${NC}"
     docker images | grep "${IMAGE_NAME}.*${VERSION}"
     
     # 询问是否运行测试
@@ -94,4 +98,5 @@ else
     exit 1
 fi
 
-echo -e "${GREEN}🎉 所有操作完成！${NC}" 
+echo
+echo -e "${PURPLE}🎉 所有操作完成！${NC}" 
