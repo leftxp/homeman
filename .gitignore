@@ -56,3 +56,7 @@ config/backups/*
 
 # Documentation
 docs/_build/ 
+
+
+# my ignore
+.cursor/
