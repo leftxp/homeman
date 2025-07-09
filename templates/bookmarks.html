@@ -44,7 +44,8 @@
                                 <div class="row">
                                     {% for item in group_items %}
                                         {% set bookmark_name = item.keys() | first %}
-                                        {% set bookmark_data = item[bookmark_name] %}
+                                        {% set bookmark_config = item[bookmark_name] %}
+                                        {% set bookmark_data = bookmark_config[0] if bookmark_config %}
                                         <div class="col-md-3 mb-3">
                                             <div class="card bookmark-item">
                                                 <div class="card-body">
@@ -260,7 +261,8 @@
         // 找到书签数据
         const group = bookmarksData.find(g => Object.keys(g)[0] === groupName);
         const bookmark = group[groupName].find(b => Object.keys(b)[0] === bookmarkName);
-        const bookmarkData = bookmark[bookmarkName];
+        const bookmarkConfig = bookmark[bookmarkName];
+        const bookmarkData = bookmarkConfig && bookmarkConfig.length > 0 ? bookmarkConfig[0] : {};
         
         document.getElementById('bookmarkModalTitle').textContent = '编辑书签';
         document.getElementById('bookmarkGroup').value = groupName;
@@ -315,11 +317,11 @@
             // 编辑现有书签
             const bookmarkIndex = bookmarksData[groupIndex][groupName].findIndex(b => Object.keys(b)[0] === originalName);
             if (bookmarkIndex !== -1) {
-                bookmarksData[groupIndex][groupName][bookmarkIndex] = { [name]: bookmarkData };
+                bookmarksData[groupIndex][groupName][bookmarkIndex] = { [name]: [bookmarkData] };
             }
         } else {
             // 添加新书签
-            bookmarksData[groupIndex][groupName].push({ [name]: bookmarkData });
+            bookmarksData[groupIndex][groupName].push({ [name]: [bookmarkData] });
         }
 
         saveBookmarks();
