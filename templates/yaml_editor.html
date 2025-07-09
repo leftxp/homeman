@@ -1,0 +1,755 @@
+{% extends "base.html" %}
+
+{% block title %}YAML 编辑器 - Homeman{% endblock %}
+
+{% block extra_css %}
+<!-- CodeMirror CSS -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/monokai.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/lint/lint.min.css">
+
+<style>
+    .yaml-editor-container {
+        height: 650px;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+    }
+    
+    .CodeMirror {
+        height: 100%;
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        font-size: 14px;
+    }
+    
+    .editor-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        padding: 0.75rem 1rem;
+        border-radius: 0.375rem 0.375rem 0 0;
+    }
+    
+    .editor-content {
+        height: calc(100% - 60px);
+    }
+    
+    .config-tabs {
+        border-bottom: 1px solid #dee2e6;
+        margin-bottom: 1rem;
+        background-color: #f8f9fa;
+        border-radius: 0.375rem 0.375rem 0 0;
+    }
+    
+    .config-tab {
+        display: inline-block;
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        border: none;
+        background: none;
+        color: #6c757d;
+        text-decoration: none;
+        position: relative;
+        transition: all 0.2s ease;
+        font-size: 0.9rem;
+        border-radius: 0.375rem 0.375rem 0 0;
+    }
+    
+    .config-tab:hover {
+        background-color: #e9ecef;
+        color: #495057;
+    }
+    
+    .config-tab.active {
+        background-color: #ffffff;
+        color: #495057;
+        border-bottom: 2px solid #0d6efd;
+        font-weight: 500;
+    }
+    
+    .config-tab .file-status {
+        font-size: 0.7rem;
+        margin-left: 0.5rem;
+        padding: 0.2rem 0.4rem;
+        border-radius: 0.25rem;
+        display: inline-block;
+        min-width: 12px;
+        text-align: center;
+    }
+    
+    .status-exists {
+        background-color: #d1ecf1;
+        color: #0c5460;
+    }
+    
+    .status-missing {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .status-modified {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    
+    .preview-section {
+        max-height: 400px;
+        overflow-y: auto;
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 1rem;
+    }
+    
+    .action-buttons {
+        position: sticky;
+        bottom: 0;
+        background-color: white;
+        padding: 1rem 0;
+        border-top: 1px solid #dee2e6;
+        margin-top: 2rem;
+    }
+    
+    .editor-info {
+        font-size: 0.875rem;
+        color: #6c757d;
+        padding: 0.5rem 1rem;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .syntax-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+    }
+    
+    .syntax-valid {
+        background-color: #28a745;
+    }
+    
+    .syntax-invalid {
+        background-color: #dc3545;
+    }
+    
+    .syntax-unknown {
+        background-color: #6c757d;
+    }
+    
+    .file-info-panel {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .keyboard-shortcuts {
+        font-size: 0.8rem;
+        color: #6c757d;
+        background-color: #f8f9fa;
+        padding: 0.5rem;
+        border-radius: 0.375rem;
+        margin-top: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2><i class="fas fa-code"></i> YAML 配置编辑器</h2>
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-outline-secondary" onclick="validateYaml()">
+                    <i class="fas fa-check-circle"></i> 验证语法
+                </button>
+                <button type="button" class="btn btn-outline-info" onclick="previewConfig()">
+                    <i class="fas fa-eye"></i> 预览解析
+                </button>
+                <button type="button" class="btn btn-primary" onclick="saveConfig()">
+                    <i class="fas fa-save"></i> 保存配置
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-9">
+        <!-- 配置文件标签页 -->
+        <div class="card">
+            <div class="config-tabs">
+                {% for config_type in config_types %}
+                <button class="config-tab{% if loop.first %} active{% endif %}" 
+                        data-config="{{ config_type }}" 
+                        onclick="switchToConfig('{{ config_type }}')"
+                        id="tab-{{ config_type }}">
+                    {{ config_type }}.yaml
+                    <span class="file-status" id="status-{{ config_type }}">
+                        {% if config_status[config_type].exists %}
+                            <i class="fas fa-check" title="文件存在"></i>
+                        {% else %}
+                            <i class="fas fa-times" title="文件不存在"></i>
+                        {% endif %}
+                    </span>
+                </button>
+                {% endfor %}
+            </div>
+            
+            <!-- 编辑器信息栏 -->
+            <div class="editor-info">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="syntax-indicator syntax-unknown" id="syntaxIndicator"></span>
+                        <span id="currentFile">{{ config_types[0] if config_types else '' }}.yaml</span>
+                        <span id="modifiedIndicator" class="badge bg-warning ms-2" style="display: none;">已修改</span>
+                    </div>
+                    <div>
+                        <small>语法状态: <span id="syntaxStatusText" class="text-muted">未知</span></small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- YAML 编辑器 -->
+            <div class="yaml-editor-container">
+                <div class="editor-content">
+                    <textarea id="yamlEditor"># 正在加载配置文件...</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <!-- 当前文件信息 -->
+        <div class="file-info-panel" id="fileInfoPanel">
+            <h6 class="mb-3"><i class="fas fa-file-alt"></i> 文件信息</h6>
+            <div id="fileDetails">
+                <p class="text-muted">加载中...</p>
+            </div>
+        </div>
+
+        <!-- 语法验证结果 -->
+        <div class="card mb-3" id="validationCard" style="display: none;">
+            <div class="card-header">
+                <h6 class="mb-0">语法验证</h6>
+            </div>
+            <div class="card-body">
+                <div id="validationResult"></div>
+            </div>
+        </div>
+
+        <!-- 配置预览 -->
+        <div class="card mb-3" id="previewCard" style="display: none;">
+            <div class="card-header">
+                <h6 class="mb-0">配置预览</h6>
+            </div>
+            <div class="card-body">
+                <div class="preview-section">
+                    <pre id="previewContent" class="mb-0"></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- 快捷键说明 -->
+        <div class="keyboard-shortcuts">
+            <strong>快捷键：</strong><br>
+            <code>Ctrl+S</code> 保存配置<br>
+            <code>Ctrl+Enter</code> 验证语法<br>
+            <code>Ctrl+Z</code> 撤销<br>
+            <code>Ctrl+Y</code> 重做
+        </div>
+    </div>
+</div>
+
+<!-- 操作按钮固定栏 -->
+<div class="action-buttons">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-center gap-2">
+                <button type="button" class="btn btn-secondary" onclick="resetEditor()">
+                    <i class="fas fa-undo"></i> 重置
+                </button>
+                <button type="button" class="btn btn-warning" onclick="reloadConfig()">
+                    <i class="fas fa-refresh"></i> 重新加载
+                </button>
+                <button type="button" class="btn btn-success" onclick="saveConfig()">
+                    <i class="fas fa-save"></i> 保存并应用
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast 消息容器 -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="messageToast" class="toast" role="alert">
+        <div class="toast-header">
+            <strong class="me-auto" id="toastTitle">消息</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+        </div>
+        <div class="toast-body" id="toastMessage"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- CodeMirror JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/yaml/yaml.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/lint/lint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/addon/lint/yaml-lint.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-yaml/4.1.0/js-yaml.min.js"></script>
+
+<script>
+let editor;
+let currentConfigType = '';
+let originalContent = '';
+let configContents = {}; // 存储各个配置文件的内容
+let configModified = {}; // 跟踪文件修改状态
+
+// 配置文件信息
+const configStatus = JSON.parse('{{ config_status | tojson | e }}');
+const configTypes = JSON.parse('{{ config_types | tojson | e }}');
+
+// 初始化编辑器
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        initializeEditor();
+        // 自动加载第一个配置文件
+        if (configTypes && configTypes.length > 0) {
+            switchToConfig(configTypes[0]);
+        }
+    } catch (error) {
+        console.error('初始化失败:', error);
+        showMessage('页面初始化失败，请刷新重试', 'error');
+    }
+});
+
+function initializeEditor() {
+    const textarea = document.getElementById('yamlEditor');
+    if (!textarea) {
+        throw new Error('找不到编辑器元素');
+    }
+    
+    editor = CodeMirror.fromTextArea(textarea, {
+        mode: 'yaml',
+        theme: 'monokai',
+        lineNumbers: true,
+        lineWrapping: true,
+        indentUnit: 2,
+        tabSize: 2,
+        autoCloseBrackets: true,
+        matchBrackets: true,
+        lint: true,
+        gutters: ["CodeMirror-lint-markers", "CodeMirror-linenumbers"],
+        extraKeys: {
+            "Ctrl-S": function(cm) {
+                saveConfig();
+            },
+            "Ctrl-Enter": function(cm) {
+                validateYaml();
+            }
+        }
+    });
+
+    // 监听内容变化
+    editor.on('change', function() {
+        updateSyntaxStatus();
+        markAsModified();
+    });
+}
+
+function switchToConfig(configType) {
+    if (!configType) return;
+    
+    try {
+        // 保存当前编辑的内容
+        if (currentConfigType && editor) {
+            configContents[currentConfigType] = editor.getValue();
+        }
+        
+        currentConfigType = configType;
+        
+        // 更新标签状态
+        document.querySelectorAll('.config-tab').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        
+        const activeTab = document.getElementById(`tab-${configType}`);
+        if (activeTab) {
+            activeTab.classList.add('active');
+        }
+        
+        // 如果已经加载过，直接显示
+        if (configContents[configType] !== undefined && editor) {
+            editor.setValue(configContents[configType]);
+            originalContent = configContents[configType];
+            updateFileInfo(configType);
+            updateModifiedStatus();
+            return;
+        }
+        
+        // 否则从服务器加载
+        loadConfig(configType);
+    } catch (error) {
+        console.error('切换配置文件失败:', error);
+        showMessage('切换配置文件失败: ' + error.message, 'error');
+    }
+}
+
+function loadConfig(configType) {
+    if (!configType) {
+        configType = currentConfigType;
+    }
+    
+    if (!configType) {
+        showMessage('配置文件类型无效', 'warning');
+        return;
+    }
+    
+    fetch(`/api/yaml/load/${configType}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success && editor) {
+                editor.setValue(data.content);
+                originalContent = data.content;
+                configContents[configType] = data.content;
+                configModified[configType] = false;
+                updateFileInfo(configType);
+                updateModifiedStatus();
+                showMessage('配置文件加载成功', 'success');
+            } else {
+                throw new Error(data.error || '加载失败');
+            }
+        })
+        .catch(error => {
+            console.error('加载配置失败:', error);
+            showMessage(`加载失败: ${error.message}`, 'error');
+        });
+}
+
+function saveConfig() {
+    if (!currentConfigType) {
+        showMessage('没有选择配置文件', 'warning');
+        return;
+    }
+
+    if (!editor) {
+        showMessage('编辑器未初始化', 'error');
+        return;
+    }
+
+    const content = editor.getValue();
+    if (!content.trim()) {
+        showMessage('配置内容不能为空', 'warning');
+        return;
+    }
+
+    fetch(`/api/yaml/save/${currentConfigType}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content: content })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            originalContent = content;
+            configContents[currentConfigType] = content;
+            configModified[currentConfigType] = false;
+            updateFileInfo(currentConfigType);
+            updateModifiedStatus();
+            updateFileStatus(currentConfigType, true);
+            showMessage(data.message, 'success');
+        } else {
+            throw new Error(data.error || '保存失败');
+        }
+    })
+    .catch(error => {
+        console.error('保存失败:', error);
+        showMessage(`保存失败: ${error.message}`, 'error');
+    });
+}
+
+function reloadConfig() {
+    if (!currentConfigType) {
+        showMessage('没有选择配置文件', 'warning');
+        return;
+    }
+    
+    if (configModified[currentConfigType]) {
+        if (!confirm('当前有未保存的更改，确定要重新加载吗？')) {
+            return;
+        }
+    }
+    
+    loadConfig(currentConfigType);
+}
+
+function resetEditor() {
+    if (!currentConfigType) {
+        showMessage('没有选择配置文件', 'warning');
+        return;
+    }
+    
+    if (!editor) {
+        showMessage('编辑器未初始化', 'error');
+        return;
+    }
+    
+    if (originalContent !== editor.getValue()) {
+        if (confirm('当前有未保存的更改，确定要重置吗？')) {
+            editor.setValue(originalContent);
+            configContents[currentConfigType] = originalContent;
+            configModified[currentConfigType] = false;
+            updateModifiedStatus();
+        }
+    } else {
+        showMessage('没有需要重置的更改', 'info');
+    }
+}
+
+function markAsModified() {
+    if (currentConfigType && originalContent !== editor.getValue()) {
+        configModified[currentConfigType] = true;
+        updateModifiedStatus();
+    }
+}
+
+function updateModifiedStatus() {
+    const indicator = document.getElementById('modifiedIndicator');
+    if (indicator) {
+        if (configModified[currentConfigType]) {
+            indicator.style.display = 'inline-block';
+            indicator.textContent = '已修改';
+        } else {
+            indicator.style.display = 'none';
+        }
+    }
+}
+
+function updateFileInfo(configType) {
+    const panel = document.getElementById('fileDetails');
+    const currentFile = document.getElementById('currentFile');
+    
+    if (currentFile) {
+        currentFile.textContent = `${configType}.yaml`;
+    }
+    
+    if (panel && configStatus[configType]) {
+        const status = configStatus[configType];
+        if (status.exists) {
+            panel.innerHTML = `
+                <div class="mb-2">
+                    <strong>状态:</strong> 
+                    <span class="badge bg-success">存在</span>
+                </div>
+                <div class="mb-2">
+                    <strong>大小:</strong> ${status.size} 字节
+                </div>
+                <div class="mb-2">
+                    <strong>修改时间:</strong><br>
+                    <small>${status.modified}</small>
+                </div>
+            `;
+        } else {
+            panel.innerHTML = `
+                <div class="mb-2">
+                    <strong>状态:</strong> 
+                    <span class="badge bg-secondary">不存在</span>
+                </div>
+                <div class="text-muted">
+                    <small>文件将在首次保存时创建</small>
+                </div>
+            `;
+        }
+    }
+}
+
+function updateFileStatus(configType, exists) {
+    const statusElement = document.getElementById(`status-${configType}`);
+    if (statusElement) {
+        if (exists) {
+            statusElement.innerHTML = '<i class="fas fa-check" title="文件存在"></i>';
+            statusElement.className = 'file-status status-exists';
+        } else {
+            statusElement.innerHTML = '<i class="fas fa-times" title="文件不存在"></i>';
+            statusElement.className = 'file-status status-missing';
+        }
+    }
+}
+
+function updateSyntaxStatus() {
+    const indicator = document.getElementById('syntaxIndicator');
+    const statusText = document.getElementById('syntaxStatusText');
+    
+    if (!indicator || !statusText || !editor) return;
+    
+    try {
+        const content = editor.getValue();
+        if (content.trim()) {
+            jsyaml.load(content);
+            statusText.textContent = '语法正确';
+            statusText.className = 'text-success';
+            indicator.className = 'syntax-indicator syntax-valid';
+        } else {
+            statusText.textContent = '内容为空';
+            statusText.className = 'text-muted';
+            indicator.className = 'syntax-indicator syntax-unknown';
+        }
+    } catch (error) {
+        statusText.textContent = '语法错误';
+        statusText.className = 'text-danger';
+        indicator.className = 'syntax-indicator syntax-invalid';
+    }
+}
+
+function validateYaml() {
+    if (!editor) {
+        showMessage('编辑器未初始化', 'error');
+        return;
+    }
+    
+    const content = editor.getValue();
+    if (!content.trim()) {
+        showMessage('请输入要验证的内容', 'warning');
+        return;
+    }
+
+    fetch('/api/yaml/validate', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content: content })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showValidationResult(data.valid, data.error);
+        } else {
+            throw new Error(data.error || '验证失败');
+        }
+    })
+    .catch(error => {
+        console.error('验证失败:', error);
+        showMessage(`验证失败: ${error.message}`, 'error');
+    });
+}
+
+function previewConfig() {
+    if (!currentConfigType) {
+        showMessage('没有选择配置文件', 'warning');
+        return;
+    }
+
+    if (!editor) {
+        showMessage('编辑器未初始化', 'error');
+        return;
+    }
+
+    const content = editor.getValue();
+    if (!content.trim()) {
+        showMessage('请输入要预览的内容', 'warning');
+        return;
+    }
+
+    fetch(`/api/yaml/preview/${currentConfigType}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content: content })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showPreview(data.parsed_data, data.type);
+        } else {
+            throw new Error(data.error || '预览失败');
+        }
+    })
+    .catch(error => {
+        console.error('预览失败:', error);
+        showMessage(`预览失败: ${error.message}`, 'error');
+    });
+}
+
+function showValidationResult(isValid, error) {
+    const card = document.getElementById('validationCard');
+    const result = document.getElementById('validationResult');
+    
+    if (!card || !result) return;
+    
+    if (isValid) {
+        result.innerHTML = '<div class="alert alert-success mb-0"><i class="fas fa-check-circle"></i> YAML 语法正确</div>';
+    } else {
+        result.innerHTML = `<div class="alert alert-danger mb-0"><i class="fas fa-exclamation-circle"></i> 语法错误:<br><small>${error}</small></div>`;
+    }
+    
+    card.style.display = 'block';
+}
+
+function showPreview(data, type) {
+    const card = document.getElementById('previewCard');
+    const content = document.getElementById('previewContent');
+    
+    if (!card || !content) return;
+    
+    content.textContent = JSON.stringify(data, null, 2);
+    card.style.display = 'block';
+}
+
+function showMessage(message, type) {
+    const toast = document.getElementById('messageToast');
+    const title = document.getElementById('toastTitle');
+    const body = document.getElementById('toastMessage');
+    
+    if (!toast || !title || !body) return;
+    
+    const icons = {
+        success: 'fas fa-check-circle text-success',
+        error: 'fas fa-exclamation-circle text-danger',
+        warning: 'fas fa-exclamation-triangle text-warning',
+        info: 'fas fa-info-circle text-info'
+    };
+    
+    title.innerHTML = `<i class="${icons[type] || icons.info}"></i> ${type === 'error' ? '错误' : type === 'warning' ? '警告' : type === 'success' ? '成功' : '信息'}`;
+    body.textContent = message;
+    
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+}
+
+// 阻止页面离开时丢失未保存内容
+window.addEventListener('beforeunload', function(e) {
+    const hasUnsaved = Object.values(configModified).some(modified => modified);
+    if (hasUnsaved) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
+</script>
+{% endblock %} 
