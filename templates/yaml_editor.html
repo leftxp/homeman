@@ -305,7 +305,8 @@
 let editor;
 let currentConfigType = '';
 let originalContent = '';
-let configContents = {}; // 存储各个配置文件的内容
+let configContents = {}; // 存储各个配置文件的当前编辑内容
+let originalContents = {}; // 存储各个配置文件的原始内容
 let configModified = {}; // 跟踪文件修改状态
 
 // 配置文件信息
@@ -382,8 +383,9 @@ function switchToConfig(configType) {
         if (configContents[configType] !== undefined && editor) {
             // 暂时禁用change事件，避免误标记为修改
             setEditorContent(configContents[configType]);
-            originalContent = configContents[configType];
-            configModified[configType] = false; // 确保重置修改状态
+            originalContent = originalContents[configType] || '';
+            // 重新计算修改状态，而不是强制重置
+            configModified[configType] = (configContents[configType] !== originalContent);
             updateFileInfo(configType);
             updateModifiedStatus();
             return;
@@ -419,6 +421,7 @@ function loadConfig(configType) {
                 // 暂时禁用change事件，避免误标记为修改
                 setEditorContent(data.content);
                 originalContent = data.content;
+                originalContents[configType] = data.content; // 保存原始内容
                 configContents[configType] = data.content;
                 configModified[configType] = false;
                 updateFileInfo(configType);
@@ -467,6 +470,7 @@ function saveConfig() {
     .then(data => {
         if (data.success) {
             originalContent = content;
+            originalContents[currentConfigType] = content; // 更新原始内容
             configContents[currentConfigType] = content;
             configModified[currentConfigType] = false;
             updateFileInfo(currentConfigType);
@@ -509,11 +513,12 @@ function resetEditor() {
         return;
     }
     
-    if (originalContent !== editor.getValue()) {
+    const originalFileContent = originalContents[currentConfigType] || '';
+    if (originalFileContent !== editor.getValue()) {
         if (confirm('当前有未保存的更改，确定要重置吗？')) {
             // 暂时禁用change事件，避免误标记为修改
-            setEditorContent(originalContent);
-            configContents[currentConfigType] = originalContent;
+            setEditorContent(originalFileContent);
+            configContents[currentConfigType] = originalFileContent;
             configModified[currentConfigType] = false;
             updateModifiedStatus();
         }
@@ -543,9 +548,15 @@ function onEditorChange() {
 }
 
 function markAsModified() {
-    if (currentConfigType && originalContent !== editor.getValue()) {
-        configModified[currentConfigType] = true;
-        updateModifiedStatus();
+    if (currentConfigType) {
+        const originalFileContent = originalContents[currentConfigType] || '';
+        const currentContent = editor.getValue();
+        const isModified = (originalFileContent !== currentContent);
+        
+        if (configModified[currentConfigType] !== isModified) {
+            configModified[currentConfigType] = isModified;
+            updateModifiedStatus();
+        }
     }
 }
 
