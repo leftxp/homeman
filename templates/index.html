@@ -1,0 +1,381 @@
+{% extends "base.html" %}
+
+{% block title %}概览 - Homeman{% endblock %}
+
+{% block content %}
+<!-- 顶部欢迎区域 -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1><i class="fas fa-dashboard"></i> 欢迎使用 Homeman</h1>
+                <p class="text-muted mb-0">
+                    {% if settings.title %}
+                        当前配置：{{ settings.title }}
+                    {% else %}
+                        Homepage 配置管理器
+                    {% endif %}
+                </p>
+            </div>
+            <div>
+                <button class="btn btn-primary" onclick="createBackup()">
+                    <i class="fas fa-save"></i> 快速备份
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 统计卡片 -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center border-primary">
+            <div class="card-body">
+                <i class="fas fa-bookmark fa-3x text-primary mb-3"></i>
+                <h4>{{ stats.bookmarks_count }}</h4>
+                <p class="text-muted mb-0">书签项目</p>
+                <small class="text-muted">{{ stats.bookmarks_groups }} 个分组</small>
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('bookmarks') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-edit"></i> 管理
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <i class="fas fa-server fa-3x text-success mb-3"></i>
+                <h4>{{ stats.services_count }}</h4>
+                <p class="text-muted mb-0">服务项目</p>
+                <small class="text-muted">{{ stats.services_groups }} 个分组</small>
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('services') }}" class="btn btn-sm btn-outline-success">
+                    <i class="fas fa-edit"></i> 管理
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-center border-info">
+            <div class="card-body">
+                <i class="fas fa-th-large fa-3x text-info mb-3"></i>
+                <h4>{{ stats.widgets_count }}</h4>
+                <p class="text-muted mb-0">小工具</p>
+                <small class="text-muted">状态监控</small>
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('widgets') }}" class="btn btn-sm btn-outline-info">
+                    <i class="fas fa-edit"></i> 管理
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card text-center border-warning">
+            <div class="card-body">
+                <i class="fab fa-docker fa-3x text-warning mb-3"></i>
+                <h4>{{ stats.docker_instances }}</h4>
+                <p class="text-muted mb-0">Docker 实例</p>
+                <small class="text-muted">容器管理</small>
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('docker') }}" class="btn btn-sm btn-outline-warning">
+                    <i class="fas fa-edit"></i> 管理
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 配置文件状态 -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-file-code"></i> 配置文件状态
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if config_status %}
+                    <div class="list-group list-group-flush">
+                        {% for file_name, file_info in config_status.items() %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ file_name }}.yaml</strong>
+                                {% if file_info.modified %}
+                                    <br><small class="text-muted">{{ file_info.modified }}</small>
+                                {% endif %}
+                            </div>
+                            <div>
+                                {% if file_info.exists %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check"></i> {{ file_info.size }}B
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-times"></i> 不存在
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-exclamation-triangle text-warning"></i>
+                        <p class="text-muted mt-2">无法获取配置文件状态</p>
+                    </div>
+                {% endif %}
+                
+                <div class="mt-3">
+                    <a href="{{ url_for('config') }}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-cog"></i> 配置管理
+                    </a>
+                    <button class="btn btn-outline-success btn-sm" onclick="downloadAllConfigs()">
+                        <i class="fas fa-download"></i> 下载配置
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 快速操作 -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-bolt"></i> 快速操作
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-6">
+                        <a href="{{ url_for('settings') }}" class="btn btn-outline-primary w-100">
+                            <i class="fas fa-cog"></i><br>
+                            <small>全局设置</small>
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="{{ url_for('bookmarks') }}" class="btn btn-outline-success w-100">
+                            <i class="fas fa-bookmark"></i><br>
+                            <small>书签管理</small>
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="{{ url_for('services') }}" class="btn btn-outline-info w-100">
+                            <i class="fas fa-server"></i><br>
+                            <small>服务管理</small>
+                        </a>
+                    </div>
+                    <div class="col-6">
+                        <a href="{{ url_for('widgets') }}" class="btn btn-outline-warning w-100">
+                            <i class="fas fa-th-large"></i><br>
+                            <small>小工具</small>
+                        </a>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <!-- 最近备份 -->
+                <h6><i class="fas fa-history"></i> 最近备份</h6>
+                {% if recent_backups %}
+                    <div class="list-group list-group-flush">
+                        {% for backup in recent_backups %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-2">
+                            <div>
+                                <small><strong>{{ backup.name }}</strong></small>
+                                <br><small class="text-muted">{{ backup.date }}</small>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-primary" onclick="downloadBackup('{{ backup.name }}')">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="restoreBackup('{{ backup.name }}')">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mt-2">
+                        <a href="{{ url_for('config') }}" class="btn btn-sm btn-outline-secondary">
+                            查看全部备份 <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-archive text-muted"></i>
+                        <p class="text-muted mt-2 mb-0">暂无备份</p>
+                        <button class="btn btn-sm btn-primary mt-2" onclick="createBackup()">
+                            <i class="fas fa-plus"></i> 创建首个备份
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 使用指南 -->
+<div class="row mt-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-graduation-cap"></i> 快速入门
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>基础配置</h6>
+                        <div class="list-group list-group-flush">
+                            <div class="list-group-item d-flex align-items-center">
+                                <span class="badge bg-primary rounded-pill me-3">1</span>
+                                <div>
+                                    <strong>配置全局设置</strong>
+                                    <br><small class="text-muted">设置网站标题、主题、语言</small>
+                                </div>
+                                <a href="{{ url_for('settings') }}" class="btn btn-sm btn-outline-primary ms-auto">
+                                    前往
+                                </a>
+                            </div>
+                            <div class="list-group-item d-flex align-items-center">
+                                <span class="badge bg-success rounded-pill me-3">2</span>
+                                <div>
+                                    <strong>添加书签分组</strong>
+                                    <br><small class="text-muted">创建常用网站快捷方式</small>
+                                </div>
+                                <a href="{{ url_for('bookmarks') }}" class="btn btn-sm btn-outline-success ms-auto">
+                                    前往
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>高级功能</h6>
+                        <div class="list-group list-group-flush">
+                            <div class="list-group-item d-flex align-items-center">
+                                <span class="badge bg-info rounded-pill me-3">3</span>
+                                <div>
+                                    <strong>配置服务监控</strong>
+                                    <br><small class="text-muted">添加服务状态监控</small>
+                                </div>
+                                <a href="{{ url_for('services') }}" class="btn btn-sm btn-outline-info ms-auto">
+                                    前往
+                                </a>
+                            </div>
+                            <div class="list-group-item d-flex align-items-center">
+                                <span class="badge bg-warning rounded-pill me-3">4</span>
+                                <div>
+                                    <strong>设置状态小工具</strong>
+                                    <br><small class="text-muted">显示实时系统信息</small>
+                                </div>
+                                <a href="{{ url_for('widgets') }}" class="btn btn-sm btn-outline-warning ms-auto">
+                                    前往
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 系统信息 -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle"></i> 系统信息
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <small class="text-muted">版本信息</small>
+                    <p class="mb-1"><strong>Homeman</strong> v1.0.0</p>
+                    <p class="mb-1"><strong>Homepage</strong> 配置管理器</p>
+                </div>
+                
+                <div class="mb-3">
+                    <small class="text-muted">配置概况</small>
+                    <p class="mb-1">已配置设置：{{ stats.configured_settings }} 项</p>
+                    <p class="mb-1">配置文件：{{ config_status.keys() | length }} 个</p>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-lightbulb"></i>
+                    <strong>提示：</strong>配置修改后需要重启 Homepage 才能生效。
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <a href="https://gethomepage.dev" target="_blank" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-external-link-alt"></i> Homepage 官网
+                    </a>
+                    <a href="https://gethomepage.dev/configs/" target="_blank" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-book"></i> 配置文档
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function createBackup() {
+        const btn = event.target.closest('button');
+        showLoading(btn, '备份中...');
+        
+        apiRequest('/api/backup', { method: 'POST' })
+            .then(data => {
+                showSuccess('配置备份成功！');
+                setTimeout(() => location.reload(), 1000);
+            })
+            .catch(error => {
+                showError('备份失败: ' + error.message);
+            })
+            .finally(() => {
+                hideLoading(btn);
+            });
+    }
+
+    function downloadAllConfigs() {
+        window.open('/api/download/configs', '_blank');
+    }
+
+    function downloadBackup(backupName) {
+        window.open(`/api/download/backup/${backupName}`, '_blank');
+    }
+
+    async function restoreBackup(backupName) {
+        const confirmed = await confirmAction(
+            `确定要恢复备份 "${backupName}" 吗？这将覆盖当前所有配置文件。`,
+            '恢复备份'
+        );
+        
+        if (confirmed) {
+            try {
+                await apiRequest('/api/restore', {
+                    method: 'POST',
+                    body: JSON.stringify({ backup_name: backupName })
+                });
+                
+                showSuccess('配置恢复成功！页面将自动刷新。');
+                setTimeout(() => location.reload(), 2000);
+            } catch (error) {
+                showError('恢复失败: ' + error.message);
+            }
+        }
+    }
+</script>
+{% endblock %} 

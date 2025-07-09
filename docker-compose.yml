@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  homeman:
+    build: .
+    container_name: homeman
+    ports:
+      - "8000:8000"
+    volumes:
+      # Homepage 配置文件目录
+      - ./config:/app/config
+      # Docker socket（如果需要 Docker 管理功能）
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - HOMEPAGE_CONFIG_PATH=/app/config
+      - FLASK_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 可选：与 Homepage 一起部署
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+    depends_on:
+      - homeman
+
+networks:
+  default:
+    name: homepage-network 

@@ -1,0 +1,362 @@
+{% extends "base.html" %}
+
+{% block title %}书签管理 - Homeman{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-bookmark"></i> 书签管理</h1>
+            <div>
+                <button type="button" class="btn btn-success" onclick="showAddGroupModal()">
+                    <i class="fas fa-plus"></i> 添加分组
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div id="bookmarks-container">
+                    {% if bookmarks %}
+                        {% for group in bookmarks %}
+                            {% set group_name = group.keys() | first %}
+                            {% set group_items = group[group_name] %}
+                            <div class="bookmark-group mb-4" data-group="{{ group_name }}">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h4>{{ group_name }}</h4>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="showAddBookmarkModal('{{ group_name }}')">
+                                            <i class="fas fa-plus"></i> 添加书签
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-warning" onclick="editGroup('{{ group_name }}')">
+                                            <i class="fas fa-edit"></i> 编辑
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteGroup('{{ group_name }}')">
+                                            <i class="fas fa-trash"></i> 删除
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    {% for item in group_items %}
+                                        {% set bookmark_name = item.keys() | first %}
+                                        {% set bookmark_data = item[bookmark_name] %}
+                                        <div class="col-md-3 mb-3">
+                                            <div class="card bookmark-item">
+                                                <div class="card-body">
+                                                    <div class="d-flex justify-content-between align-items-start">
+                                                        <div class="bookmark-info">
+                                                            {% if bookmark_data.icon %}
+                                                                <img src="{{ bookmark_data.icon }}" alt="{{ bookmark_name }}" class="bookmark-icon me-2" style="width: 24px; height: 24px;">
+                                                            {% elif bookmark_data.abbr %}
+                                                                <span class="badge bg-primary me-2">{{ bookmark_data.abbr }}</span>
+                                                            {% endif %}
+                                                            <strong>{{ bookmark_name }}</strong>
+                                                        </div>
+                                                        <div class="dropdown">
+                                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                                <i class="fas fa-ellipsis-v"></i>
+                                                            </button>
+                                                            <ul class="dropdown-menu">
+                                                                <li><a class="dropdown-item" href="#" onclick="editBookmark('{{ group_name }}', '{{ bookmark_name }}')">
+                                                                    <i class="fas fa-edit"></i> 编辑
+                                                                </a></li>
+                                                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteBookmark('{{ group_name }}', '{{ bookmark_name }}')">
+                                                                    <i class="fas fa-trash"></i> 删除
+                                                                </a></li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                    <div class="mt-2">
+                                                        <small class="text-muted">{{ bookmark_data.description or bookmark_data.href }}</small>
+                                                        <br>
+                                                        <a href="{{ bookmark_data.href }}" target="_blank" class="text-decoration-none">
+                                                            <i class="fas fa-external-link-alt"></i> {{ bookmark_data.href }}
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-bookmark fa-4x text-muted mb-3"></i>
+                            <h4>还没有书签</h4>
+                            <p class="text-muted">点击"添加分组"开始创建您的第一个书签分组</p>
+                            <button class="btn btn-primary" onclick="showAddGroupModal()">
+                                <i class="fas fa-plus"></i> 添加分组
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加/编辑分组模态框 -->
+<div class="modal fade" id="groupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="groupModalTitle">添加分组</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="groupForm">
+                    <div class="mb-3">
+                        <label for="groupName" class="form-label">分组名称</label>
+                        <input type="text" class="form-control" id="groupName" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveGroup()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加/编辑书签模态框 -->
+<div class="modal fade" id="bookmarkModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="bookmarkModalTitle">添加书签</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="bookmarkForm">
+                    <input type="hidden" id="bookmarkGroup">
+                    <input type="hidden" id="originalBookmarkName">
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="bookmarkName" class="form-label">书签名称</label>
+                                <input type="text" class="form-control" id="bookmarkName" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="bookmarkHref" class="form-label">链接地址</label>
+                                <input type="url" class="form-control" id="bookmarkHref" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="bookmarkIcon" class="form-label">图标</label>
+                                <input type="text" class="form-control" id="bookmarkIcon" placeholder="example.png 或 mdi-github">
+                                <div class="form-text">支持文件名、MDI 图标、Simple Icons 或图标 URL</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="bookmarkAbbr" class="form-label">缩写</label>
+                                <input type="text" class="form-control" id="bookmarkAbbr" maxlength="2" placeholder="GH">
+                                <div class="form-text">如果没有图标，显示 2 个字符的缩写</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="bookmarkDescription" class="form-label">描述</label>
+                        <input type="text" class="form-control" id="bookmarkDescription" placeholder="可选，默认使用链接的域名">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveBookmark()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let bookmarksData = {{ bookmarks | tojson }};
+    let currentEditingGroup = null;
+    let currentEditingBookmark = null;
+
+    function showAddGroupModal() {
+        currentEditingGroup = null;
+        document.getElementById('groupModalTitle').textContent = '添加分组';
+        document.getElementById('groupName').value = '';
+        new bootstrap.Modal(document.getElementById('groupModal')).show();
+    }
+
+    function editGroup(groupName) {
+        currentEditingGroup = groupName;
+        document.getElementById('groupModalTitle').textContent = '编辑分组';
+        document.getElementById('groupName').value = groupName;
+        new bootstrap.Modal(document.getElementById('groupModal')).show();
+    }
+
+    function saveGroup() {
+        const groupName = document.getElementById('groupName').value.trim();
+        if (!groupName) {
+            alert('请输入分组名称');
+            return;
+        }
+
+        if (currentEditingGroup) {
+            // 编辑现有分组
+            const groupIndex = bookmarksData.findIndex(group => Object.keys(group)[0] === currentEditingGroup);
+            if (groupIndex !== -1) {
+                const items = bookmarksData[groupIndex][currentEditingGroup];
+                bookmarksData[groupIndex] = { [groupName]: items };
+            }
+        } else {
+            // 添加新分组
+            bookmarksData.push({ [groupName]: [] });
+        }
+
+        saveBookmarks();
+        var modal = bootstrap.Modal.getInstance(document.getElementById('groupModal'));
+        modal.hide();
+    }
+
+    function deleteGroup(groupName) {
+        if (confirm(`确定要删除分组"${groupName}"吗？该操作将删除分组内的所有书签。`)) {
+            bookmarksData = bookmarksData.filter(group => Object.keys(group)[0] !== groupName);
+            saveBookmarks();
+        }
+    }
+
+    function showAddBookmarkModal(groupName) {
+        currentEditingGroup = groupName;
+        currentEditingBookmark = null;
+        document.getElementById('bookmarkModalTitle').textContent = '添加书签';
+        document.getElementById('bookmarkGroup').value = groupName;
+        document.getElementById('originalBookmarkName').value = '';
+        
+        // 清空表单
+        document.getElementById('bookmarkName').value = '';
+        document.getElementById('bookmarkHref').value = '';
+        document.getElementById('bookmarkIcon').value = '';
+        document.getElementById('bookmarkAbbr').value = '';
+        document.getElementById('bookmarkDescription').value = '';
+        
+        new bootstrap.Modal(document.getElementById('bookmarkModal')).show();
+    }
+
+    function editBookmark(groupName, bookmarkName) {
+        currentEditingGroup = groupName;
+        currentEditingBookmark = bookmarkName;
+        
+        // 找到书签数据
+        const group = bookmarksData.find(g => Object.keys(g)[0] === groupName);
+        const bookmark = group[groupName].find(b => Object.keys(b)[0] === bookmarkName);
+        const bookmarkData = bookmark[bookmarkName];
+        
+        document.getElementById('bookmarkModalTitle').textContent = '编辑书签';
+        document.getElementById('bookmarkGroup').value = groupName;
+        document.getElementById('originalBookmarkName').value = bookmarkName;
+        
+        // 填充表单
+        document.getElementById('bookmarkName').value = bookmarkName;
+        document.getElementById('bookmarkHref').value = bookmarkData.href || '';
+        document.getElementById('bookmarkIcon').value = bookmarkData.icon || '';
+        document.getElementById('bookmarkAbbr').value = bookmarkData.abbr || '';
+        document.getElementById('bookmarkDescription').value = bookmarkData.description || '';
+        
+        new bootstrap.Modal(document.getElementById('bookmarkModal')).show();
+    }
+
+    function saveBookmark() {
+        const groupName = document.getElementById('bookmarkGroup').value;
+        const originalName = document.getElementById('originalBookmarkName').value;
+        const name = document.getElementById('bookmarkName').value.trim();
+        const href = document.getElementById('bookmarkHref').value.trim();
+        const icon = document.getElementById('bookmarkIcon').value.trim();
+        const abbr = document.getElementById('bookmarkAbbr').value.trim();
+        const description = document.getElementById('bookmarkDescription').value.trim();
+
+        if (!name || !href) {
+            alert('请填写书签名称和链接地址');
+            return;
+        }
+
+        // 验证 URL 格式
+        try {
+            new URL(href);
+        } catch (e) {
+            alert('请输入有效的 URL 地址');
+            return;
+        }
+
+        // 构建书签数据
+        const bookmarkData = { href };
+        if (icon) bookmarkData.icon = icon;
+        if (abbr) bookmarkData.abbr = abbr;
+        if (description) bookmarkData.description = description;
+
+        // 找到分组
+        const groupIndex = bookmarksData.findIndex(group => Object.keys(group)[0] === groupName);
+        if (groupIndex === -1) {
+            alert('分组不存在');
+            return;
+        }
+
+        if (currentEditingBookmark) {
+            // 编辑现有书签
+            const bookmarkIndex = bookmarksData[groupIndex][groupName].findIndex(b => Object.keys(b)[0] === originalName);
+            if (bookmarkIndex !== -1) {
+                bookmarksData[groupIndex][groupName][bookmarkIndex] = { [name]: bookmarkData };
+            }
+        } else {
+            // 添加新书签
+            bookmarksData[groupIndex][groupName].push({ [name]: bookmarkData });
+        }
+
+        saveBookmarks();
+        var modal = bootstrap.Modal.getInstance(document.getElementById('bookmarkModal'));
+        modal.hide();
+    }
+
+    function deleteBookmark(groupName, bookmarkName) {
+        if (confirm(`确定要删除书签"${bookmarkName}"吗？`)) {
+            const groupIndex = bookmarksData.findIndex(group => Object.keys(group)[0] === groupName);
+            if (groupIndex !== -1) {
+                bookmarksData[groupIndex][groupName] = bookmarksData[groupIndex][groupName].filter(b => Object.keys(b)[0] !== bookmarkName);
+                saveBookmarks();
+            }
+        }
+    }
+
+    function saveBookmarks() {
+        fetch('/bookmarks', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(bookmarksData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                location.reload();
+            } else {
+                alert('保存失败: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('保存失败: ' + error.message);
+        });
+    }
+</script>
+{% endblock %} 

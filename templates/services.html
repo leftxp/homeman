@@ -1,0 +1,604 @@
+{% extends "base.html" %}
+
+{% block title %}服务管理 - Homeman{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-server"></i> 服务管理</h1>
+            <div>
+                <button type="button" class="btn btn-success" onclick="showAddGroupModal()">
+                    <i class="fas fa-plus"></i> 添加分组
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div id="services-container">
+                    {% if services %}
+                        {% for group in services %}
+                            {% set group_name = group.keys() | first %}
+                            {% set group_items = group[group_name] %}
+                            <div class="service-group mb-4" data-group="{{ group_name }}">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h4>{{ group_name }}</h4>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-primary" onclick="showAddServiceModal('{{ group_name }}')">
+                                            <i class="fas fa-plus"></i> 添加服务
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-warning" onclick="editGroup('{{ group_name }}')">
+                                            <i class="fas fa-edit"></i> 编辑分组
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteGroup('{{ group_name }}')">
+                                            <i class="fas fa-trash"></i> 删除分组
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    {% for item in group_items %}
+                                        {% set service_name = item.keys() | first %}
+                                        {% set service_data = item[service_name] %}
+                                        <div class="col-md-4 mb-3">
+                                            <div class="card service-item">
+                                                <div class="card-body">
+                                                    <div class="d-flex justify-content-between align-items-start">
+                                                        <div class="service-info">
+                                                            {% if service_data.icon %}
+                                                                {% if service_data.icon.startswith('http') %}
+                                                                    <img src="{{ service_data.icon }}" alt="{{ service_name }}" class="service-icon me-2" style="width: 24px; height: 24px;">
+                                                                {% elif service_data.icon.endswith('.png') or service_data.icon.endswith('.jpg') or service_data.icon.endswith('.svg') %}
+                                                                    <img src="/icons/{{ service_data.icon }}" alt="{{ service_name }}" class="service-icon me-2" style="width: 24px; height: 24px;">
+                                                                {% else %}
+                                                                    <i class="fas fa-{{ service_data.icon }} me-2"></i>
+                                                                {% endif %}
+                                                            {% else %}
+                                                                <i class="fas fa-globe me-2"></i>
+                                                            {% endif %}
+                                                            <strong>{{ service_name }}</strong>
+                                                            {% if service_data.showStats %}
+                                                                <span class="badge bg-info ms-2">Stats</span>
+                                                            {% endif %}
+                                                        </div>
+                                                        <div class="dropdown">
+                                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                                                <i class="fas fa-ellipsis-v"></i>
+                                                            </button>
+                                                            <ul class="dropdown-menu">
+                                                                <li><a class="dropdown-item" href="#" onclick="editService('{{ group_name }}', '{{ service_name }}')">
+                                                                    <i class="fas fa-edit"></i> 编辑
+                                                                </a></li>
+                                                                <li><a class="dropdown-item" href="#" onclick="configureWidget('{{ group_name }}', '{{ service_name }}')">
+                                                                    <i class="fas fa-cog"></i> 配置小工具
+                                                                </a></li>
+                                                                <li><hr class="dropdown-divider"></li>
+                                                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteService('{{ group_name }}', '{{ service_name }}')">
+                                                                    <i class="fas fa-trash"></i> 删除
+                                                                </a></li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div class="mt-2">
+                                                        {% if service_data.description %}
+                                                            <p class="text-muted mb-2">{{ service_data.description }}</p>
+                                                        {% endif %}
+                                                        
+                                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                                            <a href="{{ service_data.href }}" target="_blank" class="text-decoration-none">
+                                                                <i class="fas fa-external-link-alt"></i> 访问服务
+                                                            </a>
+                                                            
+                                                            <div class="badge-group">
+                                                                {% if service_data.siteMonitor %}
+                                                                    <span class="badge bg-success">监控</span>
+                                                                {% endif %}
+                                                                {% if service_data.ping %}
+                                                                    <span class="badge bg-warning">Ping</span>
+                                                                {% endif %}
+                                                                {% if service_data.widget %}
+                                                                    <span class="badge bg-info">小工具</span>
+                                                                {% endif %}
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {% if service_data.server or service_data.container %}
+                                                            <div class="docker-info">
+                                                                <small class="text-muted">
+                                                                    {% if service_data.server %}
+                                                                        <i class="fab fa-docker"></i> {{ service_data.server }}
+                                                                    {% endif %}
+                                                                    {% if service_data.container %}
+                                                                        / {{ service_data.container }}
+                                                                    {% endif %}
+                                                                </small>
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-server fa-4x text-muted mb-3"></i>
+                            <h4>还没有服务</h4>
+                            <p class="text-muted">点击"添加分组"开始配置您的第一个服务分组</p>
+                            <button class="btn btn-primary" onclick="showAddGroupModal()">
+                                <i class="fas fa-plus"></i> 添加分组
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 服务配置说明 -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-question-circle"></i> 服务配置说明
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>基本配置</h6>
+                        <ul>
+                            <li><strong>服务名称</strong>：显示在页面上的服务名称</li>
+                            <li><strong>链接地址</strong>：服务的访问地址</li>
+                            <li><strong>图标</strong>：支持文件名、Font Awesome 图标、URL</li>
+                            <li><strong>描述</strong>：服务的简短描述</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>高级功能</h6>
+                        <ul>
+                            <li><strong>站点监控</strong>：监控服务的可用性和响应时间</li>
+                            <li><strong>Ping 检测</strong>：使用 ICMP ping 检测服务状态</li>
+                            <li><strong>Docker 集成</strong>：连接 Docker 容器显示状态</li>
+                            <li><strong>小工具</strong>：显示服务的状态信息和统计数据</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加/编辑分组模态框 -->
+<div class="modal fade" id="groupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="groupModalTitle">添加分组</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="groupForm">
+                    <input type="hidden" id="originalGroupName">
+                    <div class="mb-3">
+                        <label for="groupName" class="form-label">分组名称</label>
+                        <input type="text" class="form-control" id="groupName" required>
+                        <div class="form-text">用于组织和分类服务</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveGroup()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加/编辑服务模态框 -->
+<div class="modal fade" id="serviceModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="serviceModalTitle">添加服务</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="serviceForm">
+                    <input type="hidden" id="serviceGroup">
+                    <input type="hidden" id="originalServiceName">
+                    
+                    <!-- 基本信息 -->
+                    <div class="mb-4">
+                        <h6>基本信息</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="serviceName" class="form-label">服务名称</label>
+                                    <input type="text" class="form-control" id="serviceName" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="serviceHref" class="form-label">链接地址</label>
+                                    <input type="url" class="form-control" id="serviceHref" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="serviceIcon" class="form-label">图标</label>
+                                    <input type="text" class="form-control" id="serviceIcon" placeholder="server 或 example.png">
+                                    <div class="form-text">支持 Font Awesome 图标名、文件名或 URL</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="serviceTarget" class="form-label">打开方式</label>
+                                    <select class="form-select" id="serviceTarget">
+                                        <option value="_self">当前窗口</option>
+                                        <option value="_blank">新窗口</option>
+                                        <option value="_top">顶层窗口</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="serviceDescription" class="form-label">描述</label>
+                            <input type="text" class="form-control" id="serviceDescription" placeholder="服务的简短描述">
+                        </div>
+                    </div>
+                    
+                    <!-- 监控配置 -->
+                    <div class="mb-4">
+                        <h6>监控配置</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="siteMonitor" class="form-label">站点监控 URL</label>
+                                    <input type="url" class="form-control" id="siteMonitor" placeholder="https://example.com/health">
+                                    <div class="form-text">监控服务可用性的 URL</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="ping" class="form-label">Ping 地址</label>
+                                    <input type="text" class="form-control" id="ping" placeholder="example.com 或 192.168.1.100">
+                                    <div class="form-text">用于 ping 检测的主机地址</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="showStats">
+                                    <label class="form-check-label" for="showStats">
+                                        显示统计信息
+                                    </label>
+                                    <div class="form-text">在服务卡片上显示状态统计</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="statusStyle" class="form-label">状态样式</label>
+                                    <select class="form-select" id="statusStyle">
+                                        <option value="">默认</option>
+                                        <option value="dot">圆点</option>
+                                        <option value="basic">基础</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Docker 配置 -->
+                    <div class="mb-4">
+                        <h6>Docker 配置 <small class="text-muted">(可选)</small></h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="dockerServer" class="form-label">Docker 服务器</label>
+                                    <select class="form-select" id="dockerServer">
+                                        <option value="">选择 Docker 实例...</option>
+                                        <!-- 这里会通过 JavaScript 动态填充 -->
+                                    </select>
+                                    <div class="form-text">从 Docker 管理中配置的实例选择</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="dockerContainer" class="form-label">容器名称</label>
+                                    <input type="text" class="form-control" id="dockerContainer" placeholder="my-app">
+                                    <div class="form-text">Docker 容器的名称</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveService()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let servicesData = {{ (services or []) | tojson | safe }};
+    let dockerInstances = {{ (docker_config or {}) | tojson | safe }};
+    let currentEditingGroup = null;
+    let currentEditingService = null;
+
+    // 页面加载时初始化 Docker 实例选项
+    document.addEventListener('DOMContentLoaded', function() {
+        populateDockerOptions();
+    });
+
+    function populateDockerOptions() {
+        const dockerSelect = document.getElementById('dockerServer');
+        dockerSelect.innerHTML = '<option value="">选择 Docker 实例...</option>';
+        
+        if (dockerInstances) {
+            for (const [instanceName, config] of Object.entries(dockerInstances)) {
+                const option = document.createElement('option');
+                option.value = instanceName;
+                option.textContent = instanceName;
+                dockerSelect.appendChild(option);
+            }
+        }
+    }
+
+    function showAddGroupModal() {
+        currentEditingGroup = null;
+        document.getElementById('groupModalTitle').textContent = '添加分组';
+        document.getElementById('originalGroupName').value = '';
+        document.getElementById('groupName').value = '';
+        new bootstrap.Modal(document.getElementById('groupModal')).show();
+    }
+
+    function editGroup(groupName) {
+        currentEditingGroup = groupName;
+        document.getElementById('groupModalTitle').textContent = '编辑分组';
+        document.getElementById('originalGroupName').value = groupName;
+        document.getElementById('groupName').value = groupName;
+        new bootstrap.Modal(document.getElementById('groupModal')).show();
+    }
+
+    function saveGroup() {
+        const groupName = document.getElementById('groupName').value.trim();
+        const originalName = document.getElementById('originalGroupName').value;
+        
+        if (!groupName) {
+            alert('请输入分组名称');
+            return;
+        }
+        
+        // 构建请求数据
+        const requestData = {
+            action: originalName ? 'update_group' : 'add_group',
+            groupName: groupName,
+            originalName: originalName
+        };
+        
+        // 发送请求
+        fetch('/api/services/group', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('保存失败: ' + (data.error || '未知错误'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('保存失败');
+        });
+    }
+
+    function deleteGroup(groupName) {
+        if (!confirm(`确定要删除分组 "${groupName}" 吗？这将删除分组中的所有服务。`)) {
+            return;
+        }
+        
+        fetch('/api/services/group', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ groupName: groupName })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('删除失败: ' + (data.error || '未知错误'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('删除失败');
+        });
+    }
+
+    function showAddServiceModal(groupName) {
+        currentEditingService = null;
+        document.getElementById('serviceModalTitle').textContent = '添加服务';
+        document.getElementById('serviceGroup').value = groupName;
+        resetServiceForm();
+        new bootstrap.Modal(document.getElementById('serviceModal')).show();
+    }
+
+    function editService(groupName, serviceName) {
+        currentEditingService = serviceName;
+        document.getElementById('serviceModalTitle').textContent = '编辑服务';
+        document.getElementById('serviceGroup').value = groupName;
+        document.getElementById('originalServiceName').value = serviceName;
+        
+        // 查找服务数据
+        const service = findService(groupName, serviceName);
+        if (service) {
+            fillServiceForm(service);
+        }
+        
+        new bootstrap.Modal(document.getElementById('serviceModal')).show();
+    }
+
+    function findService(groupName, serviceName) {
+        for (const group of servicesData) {
+            const currentGroupName = Object.keys(group)[0];
+            if (currentGroupName === groupName) {
+                const services = group[currentGroupName];
+                for (const service of services) {
+                    const currentServiceName = Object.keys(service)[0];
+                    if (currentServiceName === serviceName) {
+                        return service[currentServiceName];
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    function resetServiceForm() {
+        document.getElementById('serviceForm').reset();
+        document.getElementById('originalServiceName').value = '';
+        document.getElementById('serviceTarget').value = '_self';
+        document.getElementById('statusStyle').value = '';
+    }
+
+    function fillServiceForm(serviceData) {
+        document.getElementById('serviceName').value = currentEditingService;
+        document.getElementById('serviceHref').value = serviceData.href || '';
+        document.getElementById('serviceIcon').value = serviceData.icon || '';
+        document.getElementById('serviceTarget').value = serviceData.target || '_self';
+        document.getElementById('serviceDescription').value = serviceData.description || '';
+        document.getElementById('siteMonitor').value = serviceData.siteMonitor || '';
+        document.getElementById('ping').value = serviceData.ping || '';
+        document.getElementById('showStats').checked = serviceData.showStats || false;
+        document.getElementById('statusStyle').value = serviceData.statusStyle || '';
+        document.getElementById('dockerServer').value = serviceData.server || '';
+        document.getElementById('dockerContainer').value = serviceData.container || '';
+    }
+
+    function saveService() {
+        const serviceName = document.getElementById('serviceName').value.trim();
+        const serviceHref = document.getElementById('serviceHref').value.trim();
+        const groupName = document.getElementById('serviceGroup').value;
+        const originalName = document.getElementById('originalServiceName').value;
+        
+        if (!serviceName || !serviceHref || !groupName) {
+            alert('请填写必需的字段');
+            return;
+        }
+        
+        // 构建服务数据
+        const serviceData = {
+            href: serviceHref,
+            icon: document.getElementById('serviceIcon').value.trim(),
+            target: document.getElementById('serviceTarget').value,
+            description: document.getElementById('serviceDescription').value.trim(),
+            siteMonitor: document.getElementById('siteMonitor').value.trim(),
+            ping: document.getElementById('ping').value.trim(),
+            showStats: document.getElementById('showStats').checked,
+            statusStyle: document.getElementById('statusStyle').value,
+            server: document.getElementById('dockerServer').value,
+            container: document.getElementById('dockerContainer').value.trim()
+        };
+        
+        // 清理空值
+        Object.keys(serviceData).forEach(key => {
+            if (serviceData[key] === '' || serviceData[key] === false) {
+                delete serviceData[key];
+            }
+        });
+        
+        const requestData = {
+            action: originalName ? 'update_service' : 'add_service',
+            groupName: groupName,
+            serviceName: serviceName,
+            serviceData: serviceData,
+            originalName: originalName
+        };
+        
+        // 发送请求
+        fetch('/api/services', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('保存失败: ' + (data.error || '未知错误'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('保存失败');
+        });
+    }
+
+    function deleteService(groupName, serviceName) {
+        if (!confirm(`确定要删除服务 "${serviceName}" 吗？`)) {
+            return;
+        }
+        
+        fetch('/api/services', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                groupName: groupName, 
+                serviceName: serviceName 
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('删除失败: ' + (data.error || '未知错误'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('删除失败');
+        });
+    }
+
+    function configureWidget(groupName, serviceName) {
+        // 这个功能将在小工具管理中实现
+        alert(`配置服务 "${serviceName}" 小工具的功能即将推出！`);
+    }
+</script>
+{% endblock %} 

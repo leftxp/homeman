@@ -1,0 +1,477 @@
+{% extends "base.html" %}
+
+{% block title %}配置管理 - Homeman{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-file-code"></i> 配置管理</h1>
+            <div>
+                <button type="button" class="btn btn-primary" onclick="createBackup()">
+                    <i class="fas fa-save"></i> 立即备份
+                </button>
+                <button type="button" class="btn btn-success" onclick="downloadAllConfigs()">
+                    <i class="fas fa-download"></i> 下载配置
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 配置文件状态 -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-info-circle"></i> 配置文件状态
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if status %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>文件</th>
+                                    <th>状态</th>
+                                    <th>大小</th>
+                                    <th>修改时间</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for file_name, file_info in status.items() %}
+                                <tr>
+                                    <td>{{ file_name }}.yaml</td>
+                                    <td>
+                                        {% if file_info.exists %}
+                                            <span class="badge bg-success">存在</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">不存在</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ file_info.size }} 字节</td>
+                                    <td>{{ file_info.modified or '未知' }}</td>
+                                    <td>
+                                        {% if file_info.exists %}
+                                            <button class="btn btn-sm btn-outline-primary" onclick="downloadSingleConfig('{{ file_name }}')">
+                                                <i class="fas fa-download"></i>
+                                            </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-exclamation-triangle fa-3x text-muted mb-3"></i>
+                        <h5>无法获取配置文件状态</h5>
+                        <p class="text-muted">请检查配置文件目录是否存在</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- 备份管理 -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-archive"></i> 备份管理
+                    </h5>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="refreshBackupList()">
+                        <i class="fas fa-sync"></i> 刷新
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-primary" onclick="createBackup()">
+                            <i class="fas fa-save"></i> 创建备份
+                        </button>
+                        <button class="btn btn-outline-warning" onclick="showRestoreModal()">
+                            <i class="fas fa-undo"></i> 恢复备份
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="backup-list">
+                    <div class="text-center">
+                        <div class="spinner-border spinner-border-sm" role="status">
+                            <span class="visually-hidden">加载中...</span>
+                        </div>
+                        <p class="mt-2 text-muted">加载备份列表...</p>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>备份说明：</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>备份文件保存在 <code>config/backups/</code> 目录</li>
+                        <li>每次备份会包含所有配置文件</li>
+                        <li>建议定期备份配置文件</li>
+                        <li>恢复备份会覆盖当前配置</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-cogs"></i> 配置操作
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="card border-primary">
+                            <div class="card-body text-center">
+                                <i class="fas fa-cog fa-3x text-primary mb-3"></i>
+                                <h6>全局设置</h6>
+                                <p class="text-muted">配置网站标题、主题、语言等</p>
+                                <a href="{{ url_for('settings') }}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-cog"></i> 配置
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="card border-success">
+                            <div class="card-body text-center">
+                                <i class="fas fa-bookmark fa-3x text-success mb-3"></i>
+                                <h6>书签管理</h6>
+                                <p class="text-muted">管理书签分组和链接</p>
+                                <a href="{{ url_for('bookmarks') }}" class="btn btn-success btn-sm">
+                                    <i class="fas fa-bookmark"></i> 管理
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="card border-info">
+                            <div class="card-body text-center">
+                                <i class="fas fa-server fa-3x text-info mb-3"></i>
+                                <h6>服务管理</h6>
+                                <p class="text-muted">配置服务监控和集成</p>
+                                <a href="{{ url_for('services') }}" class="btn btn-info btn-sm">
+                                    <i class="fas fa-server"></i> 配置
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <div class="card border-warning">
+                            <div class="card-body text-center">
+                                <i class="fas fa-th-large fa-3x text-warning mb-3"></i>
+                                <h6>小工具管理</h6>
+                                <p class="text-muted">配置服务状态小工具</p>
+                                <a href="{{ url_for('widgets') }}" class="btn btn-warning btn-sm">
+                                    <i class="fas fa-th-large"></i> 配置
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i class="fas fa-question-circle"></i> 使用指南
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>配置文件说明</h6>
+                        <ul>
+                            <li><strong>settings.yaml</strong>：全局设置，包括标题、主题、语言等</li>
+                            <li><strong>bookmarks.yaml</strong>：书签配置，包括分组和链接</li>
+                            <li><strong>services.yaml</strong>：服务配置，包括监控和集成</li>
+                            <li><strong>widgets.yaml</strong>：小工具配置，显示服务状态</li>
+                            <li><strong>docker.yaml</strong>：Docker 连接配置</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>注意事项</h6>
+                        <ul>
+                            <li>修改配置后需要重启 Homepage 才能生效</li>
+                            <li>配置文件路径默认为 <code>/app/config</code></li>
+                            <li>可以通过环境变量 <code>HOMEPAGE_CONFIG_PATH</code> 自定义路径</li>
+                            <li>建议在修改前先备份现有配置</li>
+                            <li>恢复备份会覆盖当前所有配置文件</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 恢复备份模态框 -->
+<div class="modal fade" id="restoreModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">恢复备份</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>警告：</strong>恢复备份将覆盖当前所有配置文件，此操作无法撤销！
+                </div>
+                
+                <div class="mb-3">
+                    <label for="backupSelect" class="form-label">选择备份</label>
+                    <select class="form-select" id="backupSelect">
+                        <option value="">选择要恢复的备份...</option>
+                    </select>
+                </div>
+                
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="confirmRestore">
+                    <label class="form-check-label" for="confirmRestore">
+                        我确认要恢复此备份并覆盖当前配置
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-danger" onclick="confirmRestore()" disabled id="restoreBtn">
+                    <i class="fas fa-undo"></i> 确认恢复
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 页面加载时获取备份列表
+    document.addEventListener('DOMContentLoaded', function() {
+        refreshBackupList();
+    });
+
+    function createBackup() {
+        fetch('/api/backup', {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('配置备份成功！\n备份路径: ' + data.backup_path);
+                refreshBackupList();
+            } else {
+                alert('备份失败: ' + (data.error || data.message));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('备份失败: ' + error.message);
+        });
+    }
+
+    function refreshBackupList() {
+        const backupList = document.getElementById('backup-list');
+        backupList.innerHTML = `
+            <div class="text-center">
+                <div class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">加载中...</span>
+                </div>
+                <p class="mt-2 text-muted">加载备份列表...</p>
+            </div>
+        `;
+
+        fetch('/api/backups')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                displayBackupList(data.backups);
+                updateBackupSelect(data.backups);
+            } else {
+                backupList.innerHTML = `
+                    <div class="text-center py-3">
+                        <i class="fas fa-exclamation-triangle text-muted"></i>
+                        <p class="text-muted mt-2">无法加载备份列表</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            backupList.innerHTML = `
+                <div class="text-center py-3">
+                    <i class="fas fa-times text-danger"></i>
+                    <p class="text-muted mt-2">加载失败</p>
+                </div>
+            `;
+        });
+    }
+
+    function displayBackupList(backups) {
+        const backupList = document.getElementById('backup-list');
+        
+        if (backups.length === 0) {
+            backupList.innerHTML = `
+                <div class="text-center py-3">
+                    <i class="fas fa-archive text-muted"></i>
+                    <p class="text-muted mt-2">暂无备份</p>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '<div class="list-group list-group-flush">';
+        backups.forEach(backup => {
+            html += `
+                <div class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>${backup.name}</strong>
+                        <br>
+                        <small class="text-muted">${backup.date}</small>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-primary" onclick="downloadBackup('${backup.name}')">
+                            <i class="fas fa-download"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteBackup('${backup.name}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        
+        backupList.innerHTML = html;
+    }
+
+    function updateBackupSelect(backups) {
+        const select = document.getElementById('backupSelect');
+        select.innerHTML = '<option value="">选择要恢复的备份...</option>';
+        
+        backups.forEach(backup => {
+            const option = document.createElement('option');
+            option.value = backup.name;
+            option.textContent = `${backup.name} (${backup.date})`;
+            select.appendChild(option);
+        });
+    }
+
+    function showRestoreModal() {
+        new bootstrap.Modal(document.getElementById('restoreModal')).show();
+    }
+
+    // 监听确认复选框状态
+    document.getElementById('confirmRestore').addEventListener('change', function() {
+        const restoreBtn = document.getElementById('restoreBtn');
+        const backupSelect = document.getElementById('backupSelect');
+        
+        if (this.checked && backupSelect.value) {
+            restoreBtn.disabled = false;
+        } else {
+            restoreBtn.disabled = true;
+        }
+    });
+
+    // 监听备份选择
+    document.getElementById('backupSelect').addEventListener('change', function() {
+        const confirmCheckbox = document.getElementById('confirmRestore');
+        const restoreBtn = document.getElementById('restoreBtn');
+        
+        if (this.value && confirmCheckbox.checked) {
+            restoreBtn.disabled = false;
+        } else {
+            restoreBtn.disabled = true;
+        }
+    });
+
+    function confirmRestore() {
+        const backupName = document.getElementById('backupSelect').value;
+        if (!backupName) return;
+
+        fetch('/api/restore', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ backup_name: backupName })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('配置恢复成功！页面将自动刷新。');
+                location.reload();
+            } else {
+                alert('恢复失败: ' + (data.error || '未知错误'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('恢复失败: ' + error.message);
+        });
+    }
+
+    function downloadBackup(backupName) {
+        window.open(`/api/download/backup/${backupName}`, '_blank');
+    }
+
+    function deleteBackup(backupName) {
+        if (!confirm(`确定要删除备份 "${backupName}" 吗？此操作无法撤销！`)) {
+            return;
+        }
+
+        fetch('/api/backup', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ backup_name: backupName })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('备份删除成功！');
+                refreshBackupList();
+            } else {
+                alert('删除失败: ' + (data.error || '未知错误'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('删除失败: ' + error.message);
+        });
+    }
+
+    function downloadAllConfigs() {
+        window.open('/api/download/configs', '_blank');
+    }
+
+    function downloadSingleConfig(configName) {
+        window.open(`/api/download/config/${configName}`, '_blank');
+    }
+</script>
+{% endblock %} 

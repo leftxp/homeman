@@ -1,0 +1,513 @@
+{% extends "base.html" %}
+
+{% block title %}小工具管理 - Homeman{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-th-large"></i> 小工具管理</h1>
+            <div>
+                <button type="button" class="btn btn-success" onclick="showAddWidgetModal()">
+                    <i class="fas fa-plus"></i> 添加小工具
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div id="widgets-container">
+                    {% if widgets %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>小工具名称</th>
+                                        <th>类型</th>
+                                        <th>服务地址</th>
+                                        <th>字段</th>
+                                        <th>刷新间隔</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for widget_name, widget_config in widgets.items() %}
+                                    <tr data-widget="{{ widget_name }}">
+                                        <td>
+                                            <strong>{{ widget_name }}</strong>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-primary">{{ widget_config.type | default('unknown') }}</span>
+                                        </td>
+                                        <td>
+                                            {% if widget_config.url %}
+                                                <code>{{ widget_config.url }}</code>
+                                            {% else %}
+                                                <span class="text-muted">未配置</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if widget_config.fields %}
+                                                <small class="text-muted">{{ widget_config.fields | length }} 个字段</small>
+                                            {% else %}
+                                                <span class="text-muted">默认</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if widget_config.refreshInterval %}
+                                                {{ widget_config.refreshInterval }}ms
+                                            {% else %}
+                                                <span class="text-muted">默认</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <button class="btn btn-sm btn-outline-primary" onclick="editWidget('{{ widget_name }}')">
+                                                    <i class="fas fa-edit"></i> 编辑
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-warning" onclick="testWidget('{{ widget_name }}')">
+                                                    <i class="fas fa-play"></i> 测试
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteWidget('{{ widget_name }}')">
+                                                    <i class="fas fa-trash"></i> 删除
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-th-large fa-4x text-muted mb-3"></i>
+                            <h4>还没有小工具</h4>
+                            <p class="text-muted">添加小工具来显示服务的状态信息和统计数据</p>
+                            <button class="btn btn-primary" onclick="showAddWidgetModal()">
+                                <i class="fas fa-plus"></i> 添加小工具
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 小工具类型说明 -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> 支持的小工具类型</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <h6>系统监控</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>healthchecks</strong> - 健康检查状态</li>
+                            <li><strong>uptimekuma</strong> - Uptime Kuma 监控</li>
+                            <li><strong>ping</strong> - Ping 延迟检测</li>
+                            <li><strong>portainer</strong> - Docker 管理</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>媒体服务</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>plex</strong> - Plex 媒体服务器</li>
+                            <li><strong>jellyfin</strong> - Jellyfin 媒体服务器</li>
+                            <li><strong>emby</strong> - Emby 媒体服务器</li>
+                            <li><strong>sonarr</strong> - 电视剧管理</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-4">
+                        <h6>其他服务</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>adguard</strong> - 广告拦截统计</li>
+                            <li><strong>pihole</strong> - Pi-hole DNS 统计</li>
+                            <li><strong>customapi</strong> - 自定义 API</li>
+                            <li><strong>opnsense</strong> - OPNsense 防火墙</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加/编辑小工具模态框 -->
+<div class="modal fade" id="widgetModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="widgetModalTitle">添加小工具</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="widgetForm">
+                    <input type="hidden" id="originalWidgetName">
+                    
+                    <!-- 基本配置 -->
+                    <div class="mb-4">
+                        <h6>基本配置</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="widgetName" class="form-label">小工具名称</label>
+                                    <input type="text" class="form-control" id="widgetName" required>
+                                    <div class="form-text">用于标识这个小工具</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="widgetType" class="form-label">小工具类型</label>
+                                    <select class="form-select" id="widgetType" onchange="updateWidgetFields()" required>
+                                        <option value="">选择类型...</option>
+                                        <option value="healthchecks">healthchecks</option>
+                                        <option value="uptimekuma">uptimekuma</option>
+                                        <option value="ping">ping</option>
+                                        <option value="portainer">portainer</option>
+                                        <option value="plex">plex</option>
+                                        <option value="jellyfin">jellyfin</option>
+                                        <option value="emby">emby</option>
+                                        <option value="sonarr">sonarr</option>
+                                        <option value="adguard">adguard</option>
+                                        <option value="pihole">pihole</option>
+                                        <option value="customapi">customapi</option>
+                                        <option value="opnsense">opnsense</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="widgetUrl" class="form-label">服务地址</label>
+                                    <input type="url" class="form-control" id="widgetUrl" required>
+                                    <div class="form-text">小工具数据源的 URL 地址</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="refreshInterval" class="form-label">刷新间隔 (ms)</label>
+                                    <input type="number" class="form-control" id="refreshInterval" value="10000" min="1000">
+                                    <div class="form-text">数据刷新间隔</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 认证配置 -->
+                    <div class="mb-4">
+                        <h6>认证配置 <small class="text-muted">(可选)</small></h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="widgetKey" class="form-label">API 密钥</label>
+                                    <input type="text" class="form-control" id="widgetKey">
+                                    <div class="form-text">服务的 API 密钥或令牌</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="widgetUsername" class="form-label">用户名</label>
+                                    <input type="text" class="form-control" id="widgetUsername">
+                                    <div class="form-text">用于基本认证的用户名</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="widgetPassword" class="form-label">密码</label>
+                                    <input type="password" class="form-control" id="widgetPassword">
+                                    <div class="form-text">用于基本认证的密码</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="widgetSlug" class="form-label">Slug</label>
+                                    <input type="text" class="form-control" id="widgetSlug">
+                                    <div class="form-text">某些服务需要的 slug 参数</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 显示字段配置 -->
+                    <div class="mb-4" id="fieldsConfig">
+                        <h6>显示字段 <small class="text-muted">(可选)</small></h6>
+                        <div class="mb-3">
+                            <label for="widgetFields" class="form-label">字段列表</label>
+                            <textarea class="form-control" id="widgetFields" rows="3" placeholder='["field1", "field2", "field3"]'></textarea>
+                            <div class="form-text">JSON 格式的字段列表，留空使用默认字段</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 自定义映射配置 -->
+                    <div class="mb-4" id="mappingsConfig" style="display: none;">
+                        <h6>自定义字段映射</h6>
+                        <div class="mb-3">
+                            <label for="widgetMappings" class="form-label">字段映射</label>
+                            <textarea class="form-control" id="widgetMappings" rows="5" placeholder='[{"label": "状态", "field": "status"}]'></textarea>
+                            <div class="form-text">JSON 格式的字段映射配置</div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveWidget()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 测试结果模态框 -->
+<div class="modal fade" id="testResultModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">小工具测试结果</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="testResultContent">
+                <!-- 测试结果将通过 JavaScript 填充 -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let widgetsData = {{ (widgets or {}) | tojson | safe }};
+    let currentEditingWidget = null;
+
+    function showAddWidgetModal() {
+        currentEditingWidget = null;
+        document.getElementById('widgetModalTitle').textContent = '添加小工具';
+        resetWidgetForm();
+        new bootstrap.Modal(document.getElementById('widgetModal')).show();
+    }
+
+    function editWidget(widgetName) {
+        currentEditingWidget = widgetName;
+        document.getElementById('widgetModalTitle').textContent = '编辑小工具';
+        
+        const widget = widgetsData[widgetName];
+        if (widget) {
+            fillWidgetForm(widgetName, widget);
+        }
+        
+        new bootstrap.Modal(document.getElementById('widgetModal')).show();
+    }
+
+    function resetWidgetForm() {
+        document.getElementById('widgetForm').reset();
+        document.getElementById('originalWidgetName').value = '';
+        document.getElementById('refreshInterval').value = '10000';
+        updateWidgetFields();
+    }
+
+    function fillWidgetForm(widgetName, widgetData) {
+        document.getElementById('originalWidgetName').value = widgetName;
+        document.getElementById('widgetName').value = widgetName;
+        document.getElementById('widgetType').value = widgetData.type || '';
+        document.getElementById('widgetUrl').value = widgetData.url || '';
+        document.getElementById('refreshInterval').value = widgetData.refreshInterval || 10000;
+        document.getElementById('widgetKey').value = widgetData.key || '';
+        document.getElementById('widgetUsername').value = widgetData.username || '';
+        document.getElementById('widgetPassword').value = widgetData.password || '';
+        document.getElementById('widgetSlug').value = widgetData.slug || '';
+        
+        if (widgetData.fields) {
+            document.getElementById('widgetFields').value = JSON.stringify(widgetData.fields);
+        }
+        
+        if (widgetData.mappings) {
+            document.getElementById('widgetMappings').value = JSON.stringify(widgetData.mappings, null, 2);
+        }
+        
+        updateWidgetFields();
+    }
+
+    function updateWidgetFields() {
+        const widgetType = document.getElementById('widgetType').value;
+        const mappingsConfig = document.getElementById('mappingsConfig');
+        
+        if (widgetType === 'customapi') {
+            mappingsConfig.style.display = 'block';
+        } else {
+            mappingsConfig.style.display = 'none';
+        }
+    }
+
+    function saveWidget() {
+        const widgetName = document.getElementById('widgetName').value.trim();
+        const widgetType = document.getElementById('widgetType').value;
+        const widgetUrl = document.getElementById('widgetUrl').value.trim();
+        const originalName = document.getElementById('originalWidgetName').value;
+        
+        if (!widgetName || !widgetType || !widgetUrl) {
+            alert('请填写必需的字段');
+            return;
+        }
+        
+        // 构建小工具数据
+        const widgetData = {
+            type: widgetType,
+            url: widgetUrl,
+            refreshInterval: parseInt(document.getElementById('refreshInterval').value) || 10000
+        };
+        
+        // 添加可选字段
+        const key = document.getElementById('widgetKey').value.trim();
+        const username = document.getElementById('widgetUsername').value.trim();
+        const password = document.getElementById('widgetPassword').value.trim();
+        const slug = document.getElementById('widgetSlug').value.trim();
+        
+        if (key) widgetData.key = key;
+        if (username) widgetData.username = username;
+        if (password) widgetData.password = password;
+        if (slug) widgetData.slug = slug;
+        
+        // 处理字段配置
+        const fieldsText = document.getElementById('widgetFields').value.trim();
+        if (fieldsText) {
+            try {
+                widgetData.fields = JSON.parse(fieldsText);
+            } catch (e) {
+                alert('字段列表格式错误，请使用有效的 JSON 格式');
+                return;
+            }
+        }
+        
+        // 处理自定义映射
+        const mappingsText = document.getElementById('widgetMappings').value.trim();
+        if (mappingsText && widgetType === 'customapi') {
+            try {
+                widgetData.mappings = JSON.parse(mappingsText);
+            } catch (e) {
+                alert('字段映射格式错误，请使用有效的 JSON 格式');
+                return;
+            }
+        }
+        
+        const requestData = {
+            action: originalName ? 'update_widget' : 'add_widget',
+            widgetName: widgetName,
+            widgetData: widgetData,
+            originalName: originalName
+        };
+        
+        // 发送保存请求
+        fetch('/api/widgets', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('保存失败: ' + (data.error || '未知错误'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('保存失败');
+        });
+    }
+
+    function deleteWidget(widgetName) {
+        if (!confirm(`确定要删除小工具 "${widgetName}" 吗？`)) {
+            return;
+        }
+        
+        fetch('/api/widgets', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ widgetName: widgetName })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('删除失败: ' + (data.error || '未知错误'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('删除失败');
+        });
+    }
+
+    function testWidget(widgetName) {
+        const widget = widgetsData[widgetName];
+        if (!widget) return;
+        
+        // 显示测试结果模态框
+        document.getElementById('testResultContent').innerHTML = `
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">测试中...</span>
+                </div>
+                <p class="mt-2">正在测试小工具 ${widgetName}...</p>
+            </div>
+        `;
+        
+        new bootstrap.Modal(document.getElementById('testResultModal')).show();
+        
+        // 发送测试请求
+        fetch(`/api/widgets/test/${widgetName}`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            let resultHtml = '';
+            if (data.success) {
+                resultHtml = `
+                    <div class="alert alert-success">
+                        <h6><i class="fas fa-check-circle"></i> 测试成功</h6>
+                        <p>小工具 "${widgetName}" 连接正常</p>
+                        ${data.data ? `<pre class="mt-2">${JSON.stringify(data.data, null, 2)}</pre>` : ''}
+                    </div>
+                `;
+            } else {
+                resultHtml = `
+                    <div class="alert alert-danger">
+                        <h6><i class="fas fa-times-circle"></i> 测试失败</h6>
+                        <p>${data.error || '无法连接到小工具数据源'}</p>
+                    </div>
+                `;
+            }
+            document.getElementById('testResultContent').innerHTML = resultHtml;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('testResultContent').innerHTML = `
+                <div class="alert alert-danger">
+                    <h6><i class="fas fa-times-circle"></i> 测试失败</h6>
+                    <p>网络错误或服务器无响应</p>
+                </div>
+            `;
+        });
+    }
+</script>
+{% endblock %} 

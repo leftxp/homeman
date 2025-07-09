@@ -1,0 +1,563 @@
+{% extends "base.html" %}
+
+{% block title %}Docker 管理 - Homeman{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fab fa-docker"></i> Docker 管理</h1>
+            <div>
+                <button type="button" class="btn btn-success" onclick="showAddInstanceModal()">
+                    <i class="fas fa-plus"></i> 添加实例
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-body">
+                <div id="docker-container">
+                    {% if docker_config %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>实例名称</th>
+                                        <th>连接方式</th>
+                                        <th>连接地址</th>
+                                        <th>状态显示</th>
+                                        <th>Swarm</th>
+                                        <th>操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for instance_name, config in docker_config.items() %}
+                                    <tr data-instance="{{ instance_name }}">
+                                        <td>
+                                            <strong>{{ instance_name }}</strong>
+                                        </td>
+                                        <td>
+                                            {% if config.socket %}
+                                                <span class="badge bg-primary">Socket</span>
+                                            {% elif config.host %}
+                                                <span class="badge bg-info">TCP</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">未配置</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if config.socket %}
+                                                <code>{{ config.socket }}</code>
+                                            {% elif config.host %}
+                                                <code>{{ config.host }}{% if config.port %}:{{ config.port }}{% endif %}</code>
+                                            {% else %}
+                                                <span class="text-muted">无</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if config.showStats %}
+                                                <i class="fas fa-check-circle text-success"></i> 启用
+                                            {% else %}
+                                                <i class="fas fa-times-circle text-muted"></i> 禁用
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if config.swarm %}
+                                                <i class="fas fa-check-circle text-success"></i> 启用
+                                            {% else %}
+                                                <i class="fas fa-times-circle text-muted"></i> 禁用
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <button class="btn btn-sm btn-outline-primary" onclick="editInstance('{{ instance_name }}')">
+                                                    <i class="fas fa-edit"></i> 编辑
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-warning" onclick="testConnection('{{ instance_name }}')">
+                                                    <i class="fas fa-plug"></i> 测试
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="deleteInstance('{{ instance_name }}')">
+                                                    <i class="fas fa-trash"></i> 删除
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fab fa-docker fa-4x text-muted mb-3"></i>
+                            <h4>还没有 Docker 实例</h4>
+                            <p class="text-muted">添加 Docker 实例以启用容器服务发现和状态监控</p>
+                            <button class="btn btn-primary" onclick="showAddInstanceModal()">
+                                <i class="fas fa-plus"></i> 添加实例
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Docker 配置说明 -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-info-circle"></i> 配置说明</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>连接方式</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Socket:</strong> 使用 Unix socket 连接本地 Docker</li>
+                            <li><strong>TCP:</strong> 通过网络连接远程 Docker 守护进程</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>功能选项</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>状态显示:</strong> 在服务页面显示容器统计信息</li>
+                            <li><strong>Swarm:</strong> 启用 Docker Swarm 集群支持</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 添加/编辑实例模态框 -->
+<div class="modal fade" id="instanceModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="instanceModalTitle">添加 Docker 实例</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="instanceForm">
+                    <input type="hidden" id="originalInstanceName">
+                    
+                    <!-- 基本配置 -->
+                    <div class="mb-4">
+                        <h6>基本配置</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="instanceName" class="form-label">实例名称</label>
+                                    <input type="text" class="form-control" id="instanceName" required>
+                                    <div class="form-text">用于标识这个 Docker 实例</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="connectionType" class="form-label">连接方式</label>
+                                    <select class="form-select" id="connectionType" onchange="toggleConnectionOptions()">
+                                        <option value="socket">Unix Socket</option>
+                                        <option value="tcp">TCP 连接</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Socket 配置 -->
+                    <div id="socketConfig" class="mb-4">
+                        <h6>Socket 配置</h6>
+                        <div class="mb-3">
+                            <label for="socketPath" class="form-label">Socket 路径</label>
+                            <input type="text" class="form-control" id="socketPath" value="/var/run/docker.sock">
+                            <div class="form-text">Docker socket 文件路径</div>
+                        </div>
+                    </div>
+                    
+                    <!-- TCP 配置 -->
+                    <div id="tcpConfig" class="mb-4" style="display: none;">
+                        <h6>TCP 配置</h6>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="dockerHost" class="form-label">主机地址</label>
+                                    <input type="text" class="form-control" id="dockerHost" placeholder="localhost">
+                                    <div class="form-text">Docker 守护进程的主机地址</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="dockerPort" class="form-label">端口</label>
+                                    <input type="number" class="form-control" id="dockerPort" value="2376" min="1" max="65535">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 功能选项 -->
+                    <div class="mb-4">
+                        <h6>功能选项</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="showStats" checked>
+                                    <label class="form-check-label" for="showStats">
+                                        显示统计信息
+                                    </label>
+                                    <div class="form-text">在服务页面显示容器状态和统计</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="swarmMode">
+                                    <label class="form-check-label" for="swarmMode">
+                                        Swarm 模式
+                                    </label>
+                                    <div class="form-text">启用 Docker Swarm 集群支持</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 认证配置 -->
+                    <div class="mb-4">
+                        <h6>认证配置 <small class="text-muted">(可选)</small></h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="username" class="form-label">用户名</label>
+                                    <input type="text" class="form-control" id="username">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="password" class="form-label">密码</label>
+                                    <input type="password" class="form-control" id="password">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- TLS 配置 -->
+                    <div class="mb-4">
+                        <h6>TLS 配置 <small class="text-muted">(可选)</small></h6>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="enableTls" onchange="toggleTlsOptions()">
+                            <label class="form-check-label" for="enableTls">
+                                启用 TLS
+                            </label>
+                        </div>
+                        
+                        <div id="tlsOptions" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="tlsCert" class="form-label">证书文件</label>
+                                        <input type="text" class="form-control" id="tlsCert" placeholder="cert.pem">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="tlsKey" class="form-label">私钥文件</label>
+                                        <input type="text" class="form-control" id="tlsKey" placeholder="key.pem">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="tlsCa" class="form-label">CA 文件</label>
+                                        <input type="text" class="form-control" id="tlsCa" placeholder="ca.pem">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="tlsSkipVerify">
+                                <label class="form-check-label" for="tlsSkipVerify">
+                                    跳过证书验证
+                                </label>
+                                <div class="form-text">仅在测试环境使用</div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="saveInstance()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 连接测试结果模态框 -->
+<div class="modal fade" id="testResultModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">连接测试结果</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="testResultContent">
+                <!-- 测试结果将通过 JavaScript 填充 -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let dockerData = {{ docker_config | tojson }};
+    let currentEditingInstance = null;
+
+    function showAddInstanceModal() {
+        currentEditingInstance = null;
+        document.getElementById('instanceModalTitle').textContent = '添加 Docker 实例';
+        resetInstanceForm();
+        new bootstrap.Modal(document.getElementById('instanceModal')).show();
+    }
+
+    function editInstance(instanceName) {
+        currentEditingInstance = instanceName;
+        document.getElementById('instanceModalTitle').textContent = '编辑 Docker 实例';
+        
+        const instance = dockerData[instanceName];
+        if (!instance) return;
+        
+        // 填充表单
+        document.getElementById('originalInstanceName').value = instanceName;
+        document.getElementById('instanceName').value = instanceName;
+        
+        if (instance.socket) {
+            document.getElementById('connectionType').value = 'socket';
+            document.getElementById('socketPath').value = instance.socket;
+        } else if (instance.host) {
+            document.getElementById('connectionType').value = 'tcp';
+            document.getElementById('dockerHost').value = instance.host;
+            document.getElementById('dockerPort').value = instance.port || 2376;
+        }
+        
+        document.getElementById('showStats').checked = instance.showStats || false;
+        document.getElementById('swarmMode').checked = instance.swarm || false;
+        document.getElementById('username').value = instance.username || '';
+        document.getElementById('password').value = instance.password || '';
+        
+        if (instance.tls) {
+            document.getElementById('enableTls').checked = true;
+            document.getElementById('tlsCert').value = instance.tls.cert || '';
+            document.getElementById('tlsKey').value = instance.tls.key || '';
+            document.getElementById('tlsCa').value = instance.tls.ca || '';
+            document.getElementById('tlsSkipVerify').checked = instance.tls.skipVerify || false;
+            toggleTlsOptions();
+        }
+        
+        toggleConnectionOptions();
+        new bootstrap.Modal(document.getElementById('instanceModal')).show();
+    }
+
+    function resetInstanceForm() {
+        document.getElementById('instanceForm').reset();
+        document.getElementById('originalInstanceName').value = '';
+        document.getElementById('connectionType').value = 'socket';
+        document.getElementById('socketPath').value = '/var/run/docker.sock';
+        document.getElementById('dockerPort').value = '2376';
+        document.getElementById('showStats').checked = true;
+        document.getElementById('enableTls').checked = false;
+        toggleConnectionOptions();
+        toggleTlsOptions();
+    }
+
+    function toggleConnectionOptions() {
+        const connectionType = document.getElementById('connectionType').value;
+        const socketConfig = document.getElementById('socketConfig');
+        const tcpConfig = document.getElementById('tcpConfig');
+        
+        if (connectionType === 'socket') {
+            socketConfig.style.display = 'block';
+            tcpConfig.style.display = 'none';
+        } else {
+            socketConfig.style.display = 'none';
+            tcpConfig.style.display = 'block';
+        }
+    }
+
+    function toggleTlsOptions() {
+        const enableTls = document.getElementById('enableTls').checked;
+        const tlsOptions = document.getElementById('tlsOptions');
+        tlsOptions.style.display = enableTls ? 'block' : 'none';
+    }
+
+    function saveInstance() {
+        const instanceName = document.getElementById('instanceName').value.trim();
+        if (!instanceName) {
+            alert('请输入实例名称');
+            return;
+        }
+        
+        const connectionType = document.getElementById('connectionType').value;
+        let instanceConfig = {};
+        
+        if (connectionType === 'socket') {
+            const socketPath = document.getElementById('socketPath').value.trim();
+            if (!socketPath) {
+                alert('请输入 Socket 路径');
+                return;
+            }
+            instanceConfig.socket = socketPath;
+        } else {
+            const host = document.getElementById('dockerHost').value.trim();
+            const port = parseInt(document.getElementById('dockerPort').value);
+            if (!host) {
+                alert('请输入主机地址');
+                return;
+            }
+            instanceConfig.host = host;
+            if (port && port > 0 && port <= 65535) {
+                instanceConfig.port = port;
+            }
+        }
+        
+        // 功能选项
+        instanceConfig.showStats = document.getElementById('showStats').checked;
+        instanceConfig.swarm = document.getElementById('swarmMode').checked;
+        
+        // 认证
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value.trim();
+        if (username) instanceConfig.username = username;
+        if (password) instanceConfig.password = password;
+        
+        // TLS
+        if (document.getElementById('enableTls').checked) {
+            instanceConfig.tls = {};
+            const cert = document.getElementById('tlsCert').value.trim();
+            const key = document.getElementById('tlsKey').value.trim();
+            const ca = document.getElementById('tlsCa').value.trim();
+            
+            if (cert) instanceConfig.tls.cert = cert;
+            if (key) instanceConfig.tls.key = key;
+            if (ca) instanceConfig.tls.ca = ca;
+            instanceConfig.tls.skipVerify = document.getElementById('tlsSkipVerify').checked;
+        }
+        
+        // 构建请求数据
+        const originalName = document.getElementById('originalInstanceName').value;
+        const requestData = {};
+        requestData[instanceName] = instanceConfig;
+        
+        // 如果是编辑且名称改变，需要删除原来的
+        if (originalName && originalName !== instanceName) {
+            requestData._delete = originalName;
+        }
+        
+        // 发送保存请求
+        fetch('/api/docker', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('保存失败: ' + (data.error || '未知错误'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('保存失败');
+        });
+    }
+
+    function deleteInstance(instanceName) {
+        if (!confirm(`确定要删除实例 "${instanceName}" 吗？`)) {
+            return;
+        }
+        
+        fetch('/api/docker', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                _delete: instanceName
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('删除失败: ' + (data.error || '未知错误'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('删除失败');
+        });
+    }
+
+    function testConnection(instanceName) {
+        const instance = dockerData[instanceName];
+        if (!instance) return;
+        
+        // 显示测试结果模态框
+        document.getElementById('testResultContent').innerHTML = `
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">测试中...</span>
+                </div>
+                <p class="mt-2">正在测试连接到 ${instanceName}...</p>
+            </div>
+        `;
+        
+        new bootstrap.Modal(document.getElementById('testResultModal')).show();
+        
+        // 发送测试请求
+        fetch(`/api/docker/test/${instanceName}`, {
+            method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+            let resultHtml = '';
+            if (data.success) {
+                resultHtml = `
+                    <div class="alert alert-success">
+                        <h6><i class="fas fa-check-circle"></i> 连接成功</h6>
+                        <p>成功连接到 Docker 实例 "${instanceName}"</p>
+                        ${data.info ? `<small class="text-muted">${data.info}</small>` : ''}
+                    </div>
+                `;
+            } else {
+                resultHtml = `
+                    <div class="alert alert-danger">
+                        <h6><i class="fas fa-times-circle"></i> 连接失败</h6>
+                        <p>${data.error || '无法连接到 Docker 实例'}</p>
+                    </div>
+                `;
+            }
+            document.getElementById('testResultContent').innerHTML = resultHtml;
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('testResultContent').innerHTML = `
+                <div class="alert alert-danger">
+                    <h6><i class="fas fa-times-circle"></i> 测试失败</h6>
+                    <p>网络错误或服务器无响应</p>
+                </div>
+            `;
+        });
+    }
+</script>
+{% endblock %} 

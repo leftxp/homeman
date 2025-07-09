@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+
+{% block title %}全局设置 - Homeman{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-cog"></i> 全局设置</h1>
+            <div>
+                <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
+                    <i class="fas fa-undo"></i> 重置
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form method="POST" action="{{ url_for('save_settings') }}" id="settingsForm">
+    <div class="row">
+        <!-- 基础设置 -->
+        <div class="col-md-6">
+            <div class="card config-section">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-info-circle"></i> 基础设置
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">网站标题</label>
+                        <input type="text" class="form-control" id="title" name="title" 
+                               value="{{ settings.title }}" placeholder="Homepage">
+                        <div class="form-text">显示在浏览器标签页的标题</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="startUrl" class="form-label">起始 URL</label>
+                        <input type="text" class="form-control" id="startUrl" name="startUrl" 
+                               value="{{ settings.startUrl }}" placeholder="/">
+                        <div class="form-text">用于安装应用时的起始 URL</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="language" class="form-label">语言</label>
+                        <select class="form-select" id="language" name="language">
+                            {% set languages = [
+                                ('en', 'English'),
+                                ('zh-CN', '简体中文'),
+                                ('zh-Hant', '繁体中文'),
+                                ('ca', 'Català'),
+                                ('de', 'Deutsch'),
+                                ('es', 'Español'),
+                                ('fr', 'Français'),
+                                ('he', 'עברית'),
+                                ('hr', 'Hrvatski'),
+                                ('hu', 'Magyar'),
+                                ('it', 'Italiano'),
+                                ('nb-NO', 'Norsk'),
+                                ('nl', 'Nederlands'),
+                                ('pt', 'Português'),
+                                ('ru', 'Русский'),
+                                ('sv', 'Svenska'),
+                                ('vi', 'Tiếng Việt')
+                            ] %}
+                            {% for lang_code, lang_name in languages %}
+                                <option value="{{ lang_code }}" {% if settings.language == lang_code %}selected{% endif %}>
+                                    {{ lang_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="base" class="form-label">基础 URL</label>
+                        <input type="text" class="form-control" id="base" name="base" 
+                               value="{{ settings.base }}" placeholder="http://host.local/homepage">
+                        <div class="form-text">在某些代理配置中可能需要设置</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="favicon" class="form-label">自定义图标</label>
+                        <input type="text" class="form-control" id="favicon" name="favicon" 
+                               value="{{ settings.favicon }}" placeholder="https://example.com/favicon.ico">
+                        <div class="form-text">网站图标的 URL 地址</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 外观设置 -->
+        <div class="col-md-6">
+            <div class="card config-section">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-palette"></i> 外观设置
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="theme" class="form-label">主题</label>
+                        <select class="form-select" id="theme" name="theme">
+                            <option value="light" {% if settings.theme == 'light' %}selected{% endif %}>浅色</option>
+                            <option value="dark" {% if settings.theme == 'dark' %}selected{% endif %}>深色</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="color" class="form-label">颜色方案</label>
+                        <select class="form-select" id="color" name="color">
+                            {% set colors = [
+                                ('slate', 'Slate'),
+                                ('gray', 'Gray'),
+                                ('zinc', 'Zinc'),
+                                ('neutral', 'Neutral'),
+                                ('stone', 'Stone'),
+                                ('amber', 'Amber'),
+                                ('yellow', 'Yellow'),
+                                ('lime', 'Lime'),
+                                ('green', 'Green'),
+                                ('emerald', 'Emerald'),
+                                ('teal', 'Teal'),
+                                ('cyan', 'Cyan'),
+                                ('sky', 'Sky'),
+                                ('blue', 'Blue'),
+                                ('indigo', 'Indigo'),
+                                ('violet', 'Violet'),
+                                ('purple', 'Purple'),
+                                ('fuchsia', 'Fuchsia'),
+                                ('pink', 'Pink'),
+                                ('rose', 'Rose'),
+                                ('red', 'Red'),
+                                ('white', 'White')
+                            ] %}
+                            {% for color_code, color_name in colors %}
+                                <option value="{{ color_code }}" {% if settings.color == color_code %}selected{% endif %}>
+                                    {{ color_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="headerStyle" class="form-label">页眉样式</label>
+                        <select class="form-select" id="headerStyle" name="headerStyle">
+                            <option value="underlined" {% if settings.headerStyle == 'underlined' %}selected{% endif %}>下划线</option>
+                            <option value="boxed" {% if settings.headerStyle == 'boxed' %}selected{% endif %}>方框</option>
+                            <option value="clean" {% if settings.headerStyle == 'clean' %}selected{% endif %}>简洁</option>
+                            <option value="boxedWidgets" {% if settings.headerStyle == 'boxedWidgets' %}selected{% endif %}>方框小工具</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="iconStyle" class="form-label">图标样式</label>
+                        <select class="form-select" id="iconStyle" name="iconStyle">
+                            <option value="gradient" {% if settings.iconStyle == 'gradient' %}selected{% endif %}>渐变</option>
+                            <option value="theme" {% if settings.iconStyle == 'theme' %}selected{% endif %}>主题</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="target" class="form-label">链接目标</label>
+                        <select class="form-select" id="target" name="target">
+                            <option value="_self" {% if settings.target == '_self' %}selected{% endif %}>当前窗口</option>
+                            <option value="_blank" {% if settings.target == '_blank' %}selected{% endif %}>新标签页</option>
+                            <option value="_top" {% if settings.target == '_top' %}selected{% endif %}>新窗口</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- 显示设置 -->
+        <div class="col-md-6">
+            <div class="card config-section">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-eye"></i> 显示设置
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="hideVersion" name="hideVersion" 
+                                   value="true" {% if settings.hideVersion %}checked{% endif %}>
+                            <label class="form-check-label" for="hideVersion">
+                                隐藏版本信息
+                            </label>
+                            <div class="form-text">隐藏页面底部的版本显示</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="showStats" name="showStats" 
+                                   value="true" {% if settings.showStats %}checked{% endif %}>
+                            <label class="form-check-label" for="showStats">
+                                显示 Docker 统计
+                            </label>
+                            <div class="form-text">在全局显示 Docker 统计信息</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="statusStyle" class="form-label">状态样式</label>
+                        <select class="form-select" id="statusStyle" name="statusStyle">
+                            <option value="" {% if settings.statusStyle == '' %}selected{% endif %}>默认</option>
+                            <option value="dot" {% if settings.statusStyle == 'dot' %}selected{% endif %}>圆点</option>
+                            <option value="basic" {% if settings.statusStyle == 'basic' %}selected{% endif %}>基本</option>
+                        </select>
+                        <div class="form-text">Docker/K8s 状态、站点监控和 ping 的显示样式</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 布局设置 -->
+        <div class="col-md-6">
+            <div class="card config-section">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-th-large"></i> 布局设置
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="useEqualHeights" name="useEqualHeights" 
+                                   value="true" {% if settings.useEqualHeights %}checked{% endif %}>
+                            <label class="form-check-label" for="useEqualHeights">
+                                使用等高卡片
+                            </label>
+                            <div class="form-text">让同一行的服务卡片保持相同高度</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="fiveColumns" name="fiveColumns" 
+                                   value="true" {% if settings.fiveColumns %}checked{% endif %}>
+                            <label class="form-check-label" for="fiveColumns">
+                                五列布局
+                            </label>
+                            <div class="form-text">为服务启用五列布局（默认最多四列）</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="disableCollapse" name="disableCollapse" 
+                                   value="true" {% if settings.disableCollapse %}checked{% endif %}>
+                            <label class="form-check-label" for="disableCollapse">
+                                禁用折叠功能
+                            </label>
+                            <div class="form-text">禁用服务和书签的折叠功能</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="groupsInitiallyCollapsed" name="groupsInitiallyCollapsed" 
+                                   value="true" {% if settings.groupsInitiallyCollapsed %}checked{% endif %}>
+                            <label class="form-check-label" for="groupsInitiallyCollapsed">
+                                初始折叠分组
+                            </label>
+                            <div class="form-text">页面加载时默认折叠所有分组</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <button type="button" class="btn btn-outline-secondary" onclick="window.history.back()">
+                                <i class="fas fa-arrow-left"></i> 返回
+                            </button>
+                        </div>
+                        <div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> 保存设置
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function resetForm() {
+        if (confirm('确定要重置表单吗？所有未保存的更改将丢失。')) {
+            document.getElementById('settingsForm').reset();
+        }
+    }
+    
+    // 表单验证
+    document.getElementById('settingsForm').addEventListener('submit', function(e) {
+        const title = document.getElementById('title').value;
+        const startUrl = document.getElementById('startUrl').value;
+        const base = document.getElementById('base').value;
+        const favicon = document.getElementById('favicon').value;
+        
+        // 验证 URL 格式
+        const urlPattern = /^(https?:\/\/)|(\/)/;
+        
+        if (base && !urlPattern.test(base)) {
+            alert('基础 URL 必须以 http://, https:// 或 / 开头');
+            e.preventDefault();
+            return;
+        }
+        
+        if (favicon && !urlPattern.test(favicon)) {
+            alert('自定义图标 URL 必须以 http://, https:// 或 / 开头');
+            e.preventDefault();
+            return;
+        }
+        
+        if (startUrl && !startUrl.startsWith('/') && !urlPattern.test(startUrl)) {
+            alert('起始 URL 必须以 http://, https:// 或 / 开头');
+            e.preventDefault();
+            return;
+        }
+    });
+</script>
+{% endblock %} 

@@ -1,0 +1,207 @@
+# Homeman - Homepage 配置管理器
+
+一个简洁的 Web 管理界面，用于管理 [Homepage](https://gethomepage.dev) 的配置文件。
+
+## 📋 功能特性
+
+- ✅ **全局设置管理** - 配置网站标题、主题、语言等
+- ✅ **书签管理** - 添加、编辑、删除书签和分组
+- ✅ **Docker 管理** - 配置 Docker 实例和容器服务发现
+- ✅ **配置文件管理** - 备份、恢复、下载配置文件
+- ✅ **YAML 验证** - 确保生成的配置文件符合 Homepage 规范
+- 🚧 **服务管理** - 管理服务监控和集成（开发中）
+
+## 🛠️ 技术栈
+
+- **后端**: Python 3.8+ + Flask
+- **前端**: HTML5 + CSS3 + JavaScript + Bootstrap 5
+- **数据处理**: PyYAML
+- **配置存储**: YAML 文件
+
+## 📦 安装
+
+### 1. 克隆项目
+
+```bash
+git clone <项目地址>
+cd homeman
+```
+
+### 2. 安装依赖
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3. 配置环境变量
+
+```bash
+# 设置 Homepage 配置文件路径（可选，默认为 /app/config）
+export HOMEPAGE_CONFIG_PATH=/path/to/homepage/config
+
+# 设置 Flask 环境（可选，默认为 development）
+export FLASK_ENV=development
+```
+
+### 4. 启动应用
+
+```bash
+python app.py
+```
+
+应用将在 `http://localhost:8000` 启动。
+
+## 🐳 Docker 部署
+
+### 1. 构建镜像
+
+```bash
+docker build -t homeman .
+```
+
+### 2. 运行容器
+
+```bash
+docker run -d \
+  --name homeman \
+  -p 8000:8000 \
+  -v /path/to/homepage/config:/app/config \
+  -e HOMEPAGE_CONFIG_PATH=/app/config \
+  homeman
+```
+
+### 3. 使用 Docker Compose
+
+```yaml
+version: '3.8'
+services:
+  homeman:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./config:/app/config
+    environment:
+      - HOMEPAGE_CONFIG_PATH=/app/config
+```
+
+## 📖 使用说明
+
+### 1. 全局设置
+
+访问 "全局设置" 页面配置：
+- 网站标题和语言
+- 主题和颜色方案
+- 页眉样式和图标样式
+- 布局设置和显示选项
+
+### 2. 书签管理
+
+访问 "书签管理" 页面：
+- 创建书签分组
+- 添加书签项（支持图标和缩写）
+- 编辑和删除书签
+- 拖拽排序（计划中）
+
+### 3. Docker 管理
+
+访问 "Docker 管理" 页面配置：
+- Docker 实例连接（Socket 或 TCP）
+- 容器服务发现和状态监控
+- Swarm 集群支持
+- TLS 安全连接配置
+- 用户认证设置
+- 连接测试和验证
+
+### 4. 配置文件管理
+
+访问 "配置管理" 页面：
+- 查看配置文件状态
+- 备份配置文件
+- 下载配置信息
+- 恢复备份（计划中）
+
+## 📁 目录结构
+
+```
+homeman/
+├── app.py                 # Flask 应用主文件
+├── requirements.txt       # Python 依赖
+├── utils/
+│   ├── yaml_manager.py    # YAML 文件管理
+│   └── config_validator.py # 配置验证
+├── templates/
+│   ├── base.html          # 基础模板
+│   ├── index.html         # 主页
+│   ├── settings.html      # 全局设置
+│   ├── bookmarks.html     # 书签管理
+│   ├── docker.html        # Docker 管理
+│   ├── services.html      # 服务管理
+│   └── config.html        # 配置管理
+└── README.md              # 项目说明
+```
+
+## 🔧 配置文件
+
+Homeman 管理以下 Homepage 配置文件：
+
+- `settings.yaml` - 全局设置
+- `bookmarks.yaml` - 书签配置
+- `docker.yaml` - Docker 实例配置
+- `services.yaml` - 服务配置
+- `widgets.yaml` - 小工具配置
+
+## 🎨 支持的功能
+
+### 全局设置 (settings.yaml)
+- ✅ 基础设置：标题、语言、主题等
+- ✅ 外观设置：颜色方案、页眉样式等
+- ✅ 显示设置：版本隐藏、Docker 统计等
+- ✅ 布局设置：等高卡片、五列布局等
+
+### 书签管理 (bookmarks.yaml)
+- ✅ 分组管理：创建、编辑、删除分组
+- ✅ 书签管理：添加、编辑、删除书签
+- ✅ 图标支持：文件名、MDI 图标、Simple Icons 等
+- ✅ 数据验证：URL 格式、必填字段等
+
+### Docker 管理 (docker.yaml)
+- ✅ 实例管理：添加、编辑、删除 Docker 实例
+- ✅ 连接配置：Unix Socket 和 TCP 连接支持
+- ✅ 高级功能：Swarm 模式、TLS 安全、用户认证
+- ✅ 状态监控：容器统计信息显示开关
+- ✅ 连接测试：验证 Docker 连接有效性
+- ✅ 配置验证：确保符合 Homepage Docker 规范
+
+### 服务管理 (services.yaml)
+- 🚧 基础功能：显示现有服务配置
+- 🚧 完整管理：添加、编辑、删除服务
+- 🚧 监控配置：站点监控、Ping 检测等
+- 🚧 小工具集成：状态显示、API 配置等
+
+## 🚀 开发计划
+
+- [x] 项目初始化和基础架构
+- [x] YAML 解析和生成功能
+- [x] 基础 Web 界面
+- [x] 全局设置管理
+- [x] 书签管理功能
+- [x] Docker 管理功能
+- [ ] 完整的服务管理功能
+- [ ] 配置文件导入导出
+- [ ] 用户权限管理
+- [ ] 更多主题和样式
+
+## 🤝 贡献
+
+欢迎提交 Issue 和 Pull Request！
+
+## 📄 许可证
+
+MIT License
+
+## 🔗 相关链接
+
+- [Homepage 官网](https://gethomepage.dev)
+- [Homepage 配置文档](https://gethomepage.dev/configs/)
+- [Homepage GitHub](https://github.com/gethomepage/homepage) 
