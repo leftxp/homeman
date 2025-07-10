@@ -4,7 +4,8 @@ FROM python:3.9-slim as builder
 WORKDIR /app
 
 # 更换apt源为清华镜像，并安装构建依赖
-RUN echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian bookworm main contrib non-free" > /etc/apt/sources.list && \
+RUN rm -rf /etc/apt/sources.list.d/* && \
+    echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian bookworm main contrib non-free" > /etc/apt/sources.list && \
     echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian bookworm-updates main contrib non-free" >> /etc/apt/sources.list && \
     echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian-security bookworm-security main contrib non-free" >> /etc/apt/sources.list && \
     apt-get update && \
@@ -26,7 +27,8 @@ FROM python:3.9-slim
 WORKDIR /app
 
 # 设置国内源 + 安装少量运行时依赖
-RUN echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian bookworm main contrib non-free" > /etc/apt/sources.list && \
+RUN rm -rf /etc/apt/sources.list.d/* && \
+    echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian bookworm main contrib non-free" > /etc/apt/sources.list && \
     echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian bookworm-updates main contrib non-free" >> /etc/apt/sources.list && \
     echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian-security bookworm-security main contrib non-free" >> /etc/apt/sources.list && \
     apt-get update && \
