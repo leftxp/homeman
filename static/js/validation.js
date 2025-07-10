@@ -28,7 +28,8 @@ class Validator {
 
         // 实时验证输入框
         document.addEventListener('input', (e) => {
-            if (e.target.matches('input[required], input[type="url"], input[type="email"]')) {
+            if (e.target.matches('input[required], input[type="url"], input[type="email"]') && 
+                !e.target.hasAttribute('data-no-validate')) {
                 this.validateField(e.target);
             }
         });
@@ -61,6 +62,11 @@ class Validator {
     }
 
     validateField(field) {
+        // 跳过带有 data-no-validate 属性的字段
+        if (field.hasAttribute('data-no-validate')) {
+            return true;
+        }
+
         const value = field.value.trim();
         const type = field.type;
         const required = field.hasAttribute('required');

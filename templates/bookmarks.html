@@ -145,13 +145,15 @@
                                             
                                             <!-- 快速添加输入框 -->
                                             <div class="quick-add-container">
-                                                <input type="url" 
+                                                <input type="text" 
                                                        class="form-control quick-add-input" 
                                                        placeholder="输入网址快速添加"
                                                        data-group="{{ group_name }}"
+                                                       data-no-validate="true"
                                                        onkeypress="handleQuickAddKeypress(event, '{{ group_name }}')"
                                                        onblur="handleQuickAddBlur(event, '{{ group_name }}')"
-                                                       onfocus="this.placeholder='粘贴网址后按回车添加'">
+                                                       onfocus="this.placeholder='粘贴网址后按回车添加'"
+                                                       oninput="clearInputError(this)">
                                             </div>
                                         </div>
                                         
@@ -418,6 +420,56 @@
         return 'http://' + url;
     }
 
+    // 严格验证Web URL
+    function isValidWebUrl(url) {
+        try {
+            const urlObj = new URL(url);
+            
+            // 必须是http或https协议
+            if (!['http:', 'https:'].includes(urlObj.protocol)) {
+                return false;
+            }
+            
+            // 必须有hostname
+            if (!urlObj.hostname) {
+                return false;
+            }
+            
+            // 检查是否是有效的域名或IP
+            const hostname = urlObj.hostname;
+            
+            // 本地地址总是有效
+            if (['localhost', '127.0.0.1'].includes(hostname)) {
+                return true;
+            }
+            
+            // IP地址格式检查
+            const ipRegex = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+            if (ipRegex.test(hostname)) {
+                const parts = hostname.split('.');
+                return parts.every(part => {
+                    const num = parseInt(part, 10);
+                    return num >= 0 && num <= 255;
+                });
+            }
+            
+            // 域名格式检查
+            const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+            if (!domainRegex.test(hostname)) {
+                return false;
+            }
+            
+            // 必须有顶级域名（除非是IP或localhost）
+            if (!hostname.includes('.') && !['localhost'].includes(hostname) && !ipRegex.test(hostname)) {
+                return false;
+            }
+            
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+
     // 简化的网站信息提取函数
     function extractSiteInfo(url) {
         try {
@@ -487,6 +539,35 @@
         }
     }
 
+    // 设置输入框错误状态（只显示红色边框，不显示下方文字）
+    function setInputError(input) {
+        // 添加Bootstrap验证错误样式（红色边框）
+        input.classList.add('is-invalid');
+        
+        // 移除可能已存在的错误文字消息
+        const errorDiv = input.parentNode.querySelector('.invalid-feedback');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+    }
+
+    // 清除输入框错误状态
+    function clearInputError(input) {
+        // 移除Bootstrap验证错误样式
+        input.classList.remove('is-invalid');
+        
+        // 移除错误消息
+        const errorDiv = input.parentNode.querySelector('.invalid-feedback');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+        
+        // 如果validator实例存在，也调用它的清除方法
+        if (window.validator && typeof window.validator.clearFieldError === 'function') {
+            window.validator.clearFieldError(input);
+        }
+    }
+
     // 快速添加功能
     function handleQuickAddKeypress(event, groupName) {
         if (event.key === 'Enter') {
@@ -496,15 +577,17 @@
             
             if (!url) {
                 showError('请输入网址');
+                setInputError(input);
+                input.focus(); // 保持焦点，方便用户输入
                 return;
             }
 
             // 自动补充协议并验证URL
             const normalizedUrl = normalizeUrl(url);
-            try {
-                new URL(normalizedUrl); // 验证URL格式
-            } catch (e) {
+            if (!isValidWebUrl(normalizedUrl)) {
                 showError('请输入有效的网址');
+                setInputError(input);
+                input.focus(); // 保持焦点，保留输入内容让用户修改
                 return;
             }
 
@@ -525,14 +608,19 @@
                 // 显示成功消息
                 showSuccess(`已添加书签 "${name}" 到分组 "${groupName}"`);
                 
-                // 清空输入框
+                // 清除输入框的错误状态
+                clearInputError(input);
+                
+                // 清空输入框（只在成功时清空）
                 input.value = '';
                 input.blur();
                 
-                // 保存数据
-                saveBookmarks();
+                // 保存数据，但避免页面刷新导致状态丢失
+                saveBookmarksWithoutReload(groupName, name, bookmarkData);
             } else {
                 showError('分组不存在');
+                setInputError(input);
+                input.focus(); // 保持焦点
             }
         }
     }
@@ -795,6 +883,108 @@
             console.error('Error:', error);
             showError('保存失败: ' + error.message);
         });
+    }
+
+    // 保存书签但不刷新页面（用于快速添加）
+    function saveBookmarksWithoutReload(groupName, bookmarkName, bookmarkData) {
+        fetch('/bookmarks', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(bookmarksData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // 成功保存，动态添加DOM元素而不是刷新页面
+                addBookmarkToDOM(groupName, bookmarkName, bookmarkData);
+                // 重新初始化拖拽功能
+                initializeDragAndDrop();
+            } else {
+                showError('保存失败: ' + data.message);
+                // 保存失败，回滚数据
+                const groupIndex = bookmarksData.findIndex(group => Object.keys(group)[0] === groupName);
+                if (groupIndex !== -1) {
+                    bookmarksData[groupIndex][groupName] = bookmarksData[groupIndex][groupName].filter(b => Object.keys(b)[0] !== bookmarkName);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showError('保存失败: ' + error.message);
+            // 保存失败，回滚数据
+            const groupIndex = bookmarksData.findIndex(group => Object.keys(group)[0] === groupName);
+            if (groupIndex !== -1) {
+                bookmarksData[groupIndex][groupName] = bookmarksData[groupIndex][groupName].filter(b => Object.keys(b)[0] !== bookmarkName);
+            }
+        });
+    }
+
+    // 动态添加书签到DOM
+    function addBookmarkToDOM(groupName, bookmarkName, bookmarkData) {
+        const groupContainer = document.querySelector(`[data-group="${groupName}"] .bookmark-items`);
+        if (!groupContainer) return;
+
+        const newBookmarkHtml = `
+            <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+                <div class="card bookmark-item bookmark-card h-100" data-bookmark="${bookmarkName}" data-group="${groupName}">
+                    <div class="card-body p-2 position-relative">
+                        <!-- 多选复选框 -->
+                        <input type="checkbox" class="bookmark-checkbox position-absolute d-none" 
+                               style="top: 4px; left: 4px;"
+                               data-group="${groupName}" data-bookmark="${bookmarkName}">
+                        
+                        <!-- 操作按钮 -->
+                        <div class="bookmark-actions">
+                            <div class="btn-group-vertical">
+                                <button class="btn btn-outline-warning" 
+                                        onclick="editBookmark('${groupName}', '${bookmarkName}')" 
+                                        title="编辑" 
+                                        style="font-size: 0.7rem; padding: 2px 4px; line-height: 1.2; min-width: 22px; height: 22px;">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" 
+                                        onclick="deleteBookmark('${groupName}', '${bookmarkName}')" 
+                                        title="删除" 
+                                        style="font-size: 0.7rem; padding: 2px 4px; line-height: 1.2; min-width: 22px; height: 22px;">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- 书签内容 -->
+                        <div class="bookmark-content">
+                            <div class="d-flex align-items-center mb-2 bookmark-title-area" style="cursor: grab;">
+                                <div class="bookmark-icon-wrapper me-2">
+                                    ${bookmarkData.icon ? 
+                                        `<img src="${bookmarkData.icon}" alt="${bookmarkName}" class="bookmark-icon" style="width: 16px; height: 16px; object-fit: cover;">` :
+                                        bookmarkData.abbr ? 
+                                            `<span class="badge bg-primary" style="font-size: 0.6rem; padding: 2px 4px;">${bookmarkData.abbr}</span>` :
+                                            `<i class="fas fa-globe text-muted" style="font-size: 0.8rem;"></i>`
+                                    }
+                                </div>
+                                <a href="${bookmarkData.href}" target="_blank" 
+                                   class="text-decoration-none text-dark text-truncate bookmark-title-link" 
+                                   style="font-size: 0.85rem; line-height: 1.2; font-weight: bold;" 
+                                   title="${bookmarkName} - 点击打开链接">${bookmarkName}</a>
+                            </div>
+                            
+                            <div class="mb-2">
+                                <a href="${bookmarkData.href}" target="_blank" 
+                                   class="text-muted text-decoration-none bookmark-url-link"
+                                   style="font-size: 0.75rem; line-height: 1.3;" 
+                                   title="点击打开: ${bookmarkData.description || bookmarkData.href}">
+                                    <small class="text-truncate d-block">${bookmarkData.description || bookmarkData.href}</small>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        groupContainer.insertAdjacentHTML('beforeend', newBookmarkHtml);
     }
 
     // 简单的提示函数
