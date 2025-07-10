@@ -4,9 +4,9 @@ FROM python:3.9-slim as builder
 WORKDIR /app
 
 # 更换apt源为清华镜像，并安装构建依赖
-RUN cp /etc/apt/sources.list /etc/apt/sources.list.bak && \
-    sed -i 's|http://deb.debian.org/debian|https://mirrors.tuna.tsinghua.edu.cn/debian|g' /etc/apt/sources.list && \
-    sed -i 's|http://security.debian.org|https://mirrors.tuna.tsinghua.edu.cn/debian-security|g' /etc/apt/sources.list && \
+RUN echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian bookworm main contrib non-free" > /etc/apt/sources.list && \
+    echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian bookworm-updates main contrib non-free" >> /etc/apt/sources.list && \
+    echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian-security bookworm-security main contrib non-free" >> /etc/apt/sources.list && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
@@ -26,9 +26,9 @@ FROM python:3.9-slim
 WORKDIR /app
 
 # 设置国内源 + 安装少量运行时依赖
-RUN cp /etc/apt/sources.list /etc/apt/sources.list.bak && \
-    sed -i 's|http://deb.debian.org/debian|https://mirrors.tuna.tsinghua.edu.cn/debian|g' /etc/apt/sources.list && \
-    sed -i 's|http://security.debian.org|https://mirrors.tuna.tsinghua.edu.cn/debian-security|g' /etc/apt/sources.list && \
+RUN echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian bookworm main contrib non-free" > /etc/apt/sources.list && \
+    echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian bookworm-updates main contrib non-free" >> /etc/apt/sources.list && \
+    echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian-security bookworm-security main contrib non-free" >> /etc/apt/sources.list && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         curl \
