@@ -17,8 +17,8 @@ RUN rm -rf /etc/apt/sources.list.d/* && \
 # 复制依赖文件
 COPY requirements.txt .
 
-# 安装依赖到临时目录
-RUN pip install --user --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
+# 安装依赖到指定目录（使用全局安装而不是用户安装）
+RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 
 # 运行阶段
 FROM python:3.9-slim
@@ -40,10 +40,10 @@ RUN rm -rf /etc/apt/sources.list.d/* && \
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV HOMEPAGE_CONFIG_PATH=/app/config
-ENV PATH=/root/.local/bin:$PATH
 
-# 从构建阶段复制 Python 包
-COPY --from=builder /root/.local /root/.local
+# 从构建阶段复制 Python 包（全局安装的包）
+COPY --from=builder /usr/local/lib/python3.9/site-packages /usr/local/lib/python3.9/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
 
 # 复制应用代码
 COPY . .
