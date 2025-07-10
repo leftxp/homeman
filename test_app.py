@@ -9,7 +9,7 @@ import json
 
 def test_application():
     """测试应用程序的基本功能"""
-    base_url = "http://localhost:8000"
+    base_url = "http://localhost:3100"
     
     print("🧪 开始测试 Homeman 应用程序...")
     

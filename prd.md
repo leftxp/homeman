@@ -282,7 +282,7 @@ FROM python:3.9-slim  # 或 php:8.1-apache
 WORKDIR /app
 COPY . .
 RUN pip install -r requirements.txt  # 或 composer install
-EXPOSE 8000
+EXPOSE 3100
 CMD ["python", "app.py"]  # 或 apache2-foreground
 ```
 

@@ -61,18 +61,18 @@ echo.
 set /p test_container="是否运行测试容器? [y/N]: "
 if /i "%test_container%"=="y" (
     echo 🧪 启动测试容器...
-    docker run -d --name homeman-test -p 8000:8000 %IMAGE_NAME%:%VERSION%
+    docker run -d --name homeman-test -p 3100:3100 %IMAGE_NAME%:%VERSION%
     
     REM 等待容器启动
     timeout /t 5 /nobreak >nul
     
     REM 简单的健康检查
-    curl -f http://localhost:8000/ >nul 2>&1
+    curl -f http://localhost:3100/ >nul 2>&1
     if errorlevel 1 (
         echo ❌ 容器启动失败
         docker logs homeman-test
     ) else (
-        echo ✅ 容器运行正常！访问: http://localhost:8000
+        echo ✅ 容器运行正常！访问: http://localhost:3100
     )
     
     echo 💡 测试完成后请手动清理: docker rm -f homeman-test

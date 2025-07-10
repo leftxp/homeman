@@ -155,14 +155,14 @@ echo -e "${CYAN}🌐 DockerHub页面:${NC}"
 echo "   https://hub.docker.com/r/$DOCKERHUB_USERNAME/$IMAGE_NAME"
 echo
 echo -e "${CYAN}🚀 运行命令:${NC}"
-echo "   docker run -d -p 8000:8000 $FULL_IMAGE_NAME:$VERSION"
+echo "   docker run -d -p 3100:3100 $FULL_IMAGE_NAME:$VERSION"
 echo
 
 # 询问是否本地测试
 read -p "是否在本地测试刚推送的镜像? [y/N]: " test_local
 if [[ $test_local =~ ^[Yy]$ ]]; then
     echo -e "${BLUE}🧪 启动测试容器...${NC}"
-    docker run -d --name homeman-dockerhub-test -p 8001:8000 "$FULL_IMAGE_NAME:$VERSION"
+    docker run -d --name homeman-dockerhub-test -p 8001:3100 "$FULL_IMAGE_NAME:$VERSION"
     
     echo -e "${YELLOW}💡 容器已启动在端口 8001${NC}"
     echo -e "${YELLOW}💡 访问: http://localhost:8001${NC}"

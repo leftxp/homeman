@@ -673,4 +673,4 @@ if __name__ == '__main__':
     # 确保配置目录存在
     os.makedirs(HOMEPAGE_CONFIG_PATH, exist_ok=True)
     
-    app.run(host='0.0.0.0', port=8000, debug=True) 
+    app.run(host='0.0.0.0', port=3100, debug=True) 

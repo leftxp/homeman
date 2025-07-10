@@ -29,11 +29,11 @@ RUN mkdir -p /app/config
 RUN chmod +x /app/app.py
 
 # 暴露端口
-EXPOSE 8000
+EXPOSE 3100
 
 # 健康检查
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/ || exit 1
+  CMD curl -f http://localhost:3100/ || exit 1
 
 # 启动应用
 CMD ["python", "app.py"] 

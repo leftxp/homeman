@@ -50,7 +50,7 @@ export FLASK_ENV=development
 python app.py
 ```
 
-应用将在 `http://localhost:8000` 启动。
+应用将在 `http://localhost:3100` 启动。
 
 ## 🐳 Docker 部署
 
@@ -65,7 +65,7 @@ docker build -t homeman .
 ```bash
 docker run -d \
   --name homeman \
-  -p 8000:8000 \
+  -p 3100:3100 \
   -v /path/to/homepage/config:/app/config \
   -e HOMEPAGE_CONFIG_PATH=/app/config \
   homeman
@@ -79,7 +79,7 @@ services:
   homeman:
     build: .
     ports:
-      - "8000:8000"
+      - "3100:3100"
     volumes:
       - ./config:/app/config
     environment:
@@ -149,7 +149,7 @@ chmod +x build-dockerhub.sh
 - 🔍 **自动环境检查** - 验证 Docker 是否正确安装和运行
 - 🏗️ **多种构建模式** - 基础、优化、多架构构建选择
 - 🐳 **DockerHub 集成** - 自动登录、构建、推送
-- 🧪 **本地测试** - 构建后可选择立即测试
+- 🧪 **本地测试** - 构建后可选择立即测试（默认端口3100）
 - 🏷️ **标签管理** - 支持自动创建 latest 标签
 - 📊 **信息展示** - 构建完成后显示详细的镜像信息和使用指南
 

@@ -66,14 +66,14 @@ if docker images | grep -q "${IMAGE_NAME}.*${VERSION}"; then
     read -p "是否运行测试容器? [y/N]: " test_container
     if [[ $test_container =~ ^[Yy]$ ]]; then
         echo -e "${BLUE}🧪 启动测试容器...${NC}"
-        docker run -d --name homeman-test -p 8000:8000 ${IMAGE_NAME}:${VERSION}
+        docker run -d --name homeman-test -p 3100:3100 ${IMAGE_NAME}:${VERSION}
         
         # 等待容器启动
         sleep 5
         
         # 健康检查
-        if curl -f http://localhost:8000/ &> /dev/null; then
-            echo -e "${GREEN}✅ 容器运行正常！访问: http://localhost:8000${NC}"
+        if curl -f http://localhost:3100/ &> /dev/null; then
+            echo -e "${GREEN}✅ 容器运行正常！访问: http://localhost:3100${NC}"
         else
             echo -e "${RED}❌ 容器启动失败${NC}"
             docker logs homeman-test

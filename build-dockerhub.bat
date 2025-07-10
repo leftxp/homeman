@@ -149,14 +149,14 @@ echo 🌐 DockerHub页面:
 echo    https://hub.docker.com/r/%DOCKERHUB_USERNAME%/%IMAGE_NAME%
 echo.
 echo 🚀 运行命令:
-echo    docker run -d -p 8000:8000 %FULL_IMAGE_NAME%:%VERSION%
+echo    docker run -d -p 3100:3100 %FULL_IMAGE_NAME%:%VERSION%
 echo.
 
 REM 询问是否本地测试
 set /p test_local="是否在本地测试刚推送的镜像? [y/N]: "
 if /i "%test_local%"=="y" (
     echo 🧪 启动测试容器...
-    docker run -d --name homeman-dockerhub-test -p 8001:8000 %FULL_IMAGE_NAME%:%VERSION%
+    docker run -d --name homeman-dockerhub-test -p 8001:3100 %FULL_IMAGE_NAME%:%VERSION%
     
     echo 💡 容器已启动在端口 8001
     echo 💡 访问: http://localhost:8001

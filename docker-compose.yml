@@ -5,7 +5,7 @@ services:
     build: .
     container_name: homeman
     ports:
-      - "8000:8000"
+      - "3100:3100"
     volumes:
       # Homepage 配置文件目录
       - ./config:/app/config
@@ -16,7 +16,7 @@ services:
       - FLASK_ENV=production
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      test: ["CMD", "curl", "-f", "http://localhost:3100/"]
       interval: 30s
       timeout: 10s
       retries: 3
