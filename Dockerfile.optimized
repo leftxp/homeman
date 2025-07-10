@@ -17,7 +17,7 @@ RUN echo "deb https://mirrors.tuna.tsinghua.edu.cn/debian bookworm main contrib 
 COPY requirements.txt .
 
 # 安装依赖到临时目录
-RUN pip install --user --no-cache-dir -r requirements.txt
+RUN pip install --user --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
 
 # 运行阶段
 FROM python:3.9-slim

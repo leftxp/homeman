@@ -54,13 +54,7 @@ python app.py
 
 ## 🐳 Docker 部署
 
-### 1. 构建镜像
-
-```bash
-docker build -t homeman .
-```
-
-### 2. 运行容器
+### 1. 运行容器
 
 ```bash
 docker run -d \
@@ -71,13 +65,13 @@ docker run -d \
   homeman
 ```
 
-### 3. 使用 Docker Compose
+### 2. 使用 Docker Compose
 
 ```yaml
 version: '3.8'
 services:
   homeman:
-    build: .
+    image: homeman
     ports:
       - "3100:3100"
     volumes:
@@ -85,73 +79,6 @@ services:
     environment:
       - HOMEPAGE_CONFIG_PATH=/app/config
 ```
-
-## 🛠️ 快速构建脚本
-
-项目提供了便捷的构建脚本，支持多种构建和部署场景：
-
-### Windows 用户
-
-#### 本地构建脚本 (build.bat)
-```bash
-# 基本使用
-./build.bat
-
-# 指定版本
-./build.bat v1.0.0
-```
-
-#### DockerHub 发布脚本 (build-dockerhub.bat)
-```bash
-# 基本使用（会提示输入用户名）
-./build-dockerhub.bat
-
-# 指定用户名和版本
-./build-dockerhub.bat yourusername v1.0.0
-```
-
-### Linux/macOS 用户
-
-#### 本地构建脚本 (build.sh)
-```bash
-# 添加执行权限
-chmod +x build.sh
-
-# 基本使用
-./build.sh
-
-# 指定版本
-./build.sh v1.0.0
-```
-
-#### DockerHub 发布脚本 (build-dockerhub.sh)
-```bash
-# 添加执行权限
-chmod +x build-dockerhub.sh
-
-# 基本使用（会提示输入用户名）
-./build-dockerhub.sh
-
-# 指定用户名和版本
-./build-dockerhub.sh yourusername v1.0.0
-```
-
-### 构建选项说明
-
-所有构建脚本都支持以下选项：
-
-1. **基础构建** - 使用标准 Dockerfile，适合开发和测试
-2. **优化构建** - 使用 Dockerfile.optimized，多阶段构建，镜像更小
-3. **多架构构建** - 支持 AMD64 和 ARM64 平台，适合生产环境
-
-### 功能特性
-
-- 🔍 **自动环境检查** - 验证 Docker 是否正确安装和运行
-- 🏗️ **多种构建模式** - 基础、优化、多架构构建选择
-- 🐳 **DockerHub 集成** - 自动登录、构建、推送
-- 🧪 **本地测试** - 构建后可选择立即测试（默认端口3100）
-- 🏷️ **标签管理** - 支持自动创建 latest 标签
-- 📊 **信息展示** - 构建完成后显示详细的镜像信息和使用指南
 
 ## 📖 使用说明
 
@@ -243,12 +170,6 @@ chmod +x build-dockerhub.sh
 homeman/
 ├── app.py                 # Flask 应用主文件
 ├── requirements.txt       # Python 依赖
-├── build.bat              # Windows 构建脚本
-├── build.sh               # Linux/macOS 构建脚本
-├── build-dockerhub.bat    # Windows DockerHub 发布脚本
-├── build-dockerhub.sh     # Linux/macOS DockerHub 发布脚本
-├── Dockerfile             # 基础 Docker 镜像配置
-├── Dockerfile.optimized   # 优化 Docker 镜像配置
 ├── docker-compose.yml     # Docker Compose 配置
 ├── utils/
 │   ├── yaml_manager.py    # YAML 文件管理
