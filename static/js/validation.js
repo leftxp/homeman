@@ -339,4 +339,261 @@ window.showInfo = (message, duration) => validator.showInfo(message, duration);
 window.showLoading = (element, text) => validator.showLoading(element, text);
 window.hideLoading = (element) => validator.hideLoading(element);
 window.apiRequest = (url, options) => validator.apiRequest(url, options);
-window.confirmAction = (message, title) => validator.confirm(message, title); 
+window.confirmAction = (message, title) => validator.confirm(message, title);
+
+/**
+ * 书签相关的工具函数
+ */
+class BookmarkUtils {
+    /**
+     * 从URL提取网站信息
+     * @param {string} url - 网址
+     * @returns {object} 包含名称、缩写、域名等信息
+     */
+    static extractSiteInfo(url) {
+        try {
+            const urlObj = new URL(url);
+            const hostname = urlObj.hostname;
+            
+            // 去掉 www. 前缀
+            const domain = hostname.replace(/^www\./, '');
+            
+            // 获取主域名（去掉子域名）
+            const parts = domain.split('.');
+            let siteName = parts[0];
+            
+            // 常见网站的特殊处理
+            const siteNameMap = {
+                'github': 'GitHub',
+                'gitlab': 'GitLab',
+                'stackoverflow': 'Stack Overflow',
+                'youtube': 'YouTube',
+                'google': 'Google',
+                'microsoft': 'Microsoft',
+                'apple': 'Apple',
+                'amazon': 'Amazon',
+                'facebook': 'Facebook',
+                'twitter': 'Twitter',
+                'linkedin': 'LinkedIn',
+                'instagram': 'Instagram',
+                'reddit': 'Reddit',
+                'wikipedia': 'Wikipedia',
+                'medium': 'Medium',
+                'netflix': 'Netflix',
+                'spotify': 'Spotify',
+                'dropbox': 'Dropbox',
+                'slack': 'Slack',
+                'discord': 'Discord',
+                'telegram': 'Telegram',
+                'whatsapp': 'WhatsApp',
+                'zoom': 'Zoom',
+                'notion': 'Notion',
+                'trello': 'Trello',
+                'figma': 'Figma',
+                'canva': 'Canva',
+                'adobe': 'Adobe',
+                'atlassian': 'Atlassian',
+                'jetbrains': 'JetBrains',
+                'docker': 'Docker',
+                'kubernetes': 'Kubernetes',
+                'aws': 'AWS',
+                'azure': 'Azure',
+                'gcp': 'Google Cloud',
+                'digitalocean': 'DigitalOcean',
+                'heroku': 'Heroku',
+                'vercel': 'Vercel',
+                'netlify': 'Netlify',
+                'cloudflare': 'Cloudflare'
+            };
+            
+            // 使用映射表或首字母大写
+            const displayName = siteNameMap[siteName.toLowerCase()] || 
+                               siteName.charAt(0).toUpperCase() + siteName.slice(1);
+            
+            // 生成缩写
+            let abbr = '';
+            if (displayName.includes(' ')) {
+                // 多个单词：取每个单词的首字母
+                abbr = displayName.split(' ')
+                    .map(word => word.charAt(0))
+                    .join('')
+                    .substring(0, 2)
+                    .toUpperCase();
+            } else {
+                // 单个单词：取前两个字符
+                abbr = displayName.substring(0, 2).toUpperCase();
+            }
+            
+            return {
+                name: displayName,
+                abbr: abbr,
+                domain: domain,
+                hostname: hostname,
+                protocol: urlObj.protocol,
+                port: urlObj.port
+            };
+        } catch (e) {
+            console.warn('URL 解析失败:', e);
+            return {
+                name: '',
+                abbr: '',
+                domain: '',
+                hostname: '',
+                protocol: '',
+                port: ''
+            };
+        }
+    }
+    
+    /**
+     * 验证图标格式
+     * @param {string} icon - 图标字符串
+     * @returns {boolean} 是否有效
+     */
+    static validateIcon(icon) {
+        if (!icon) return true;  // 空值允许
+        
+        // 文件名格式
+        if (/^[a-zA-Z0-9_-]+\.(png|jpg|jpeg|gif|svg|webp)$/i.test(icon)) {
+            return true;
+        }
+        
+        // MDI 图标格式
+        if (/^mdi-[a-zA-Z0-9_-]+$/i.test(icon)) {
+            return true;
+        }
+        
+        // Simple Icons 格式
+        if (/^si-[a-zA-Z0-9_-]+$/i.test(icon)) {
+            return true;
+        }
+        
+        // selfh.st icons 格式
+        if (/^sh-[a-zA-Z0-9_-]+(\.(svg|png|webp))?$/i.test(icon)) {
+            return true;
+        }
+        
+        // 完整 URL
+        try {
+            new URL(icon);
+            return true;
+        } catch (e) {
+            // 不是有效 URL
+        }
+        
+        // 本地路径
+        if (icon.startsWith('/') || icon.startsWith('./') || icon.startsWith('../')) {
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * 获取网站图标URL
+     * @param {string} url - 网址
+     * @returns {string} 图标URL
+     */
+    static getFaviconUrl(url) {
+        try {
+            const urlObj = new URL(url);
+            return `${urlObj.protocol}//${urlObj.hostname}/favicon.ico`;
+        } catch (e) {
+            return '';
+        }
+    }
+    
+    /**
+     * 批量验证书签数据
+     * @param {Array} bookmarks - 书签数组
+     * @returns {object} 验证结果
+     */
+    static validateBookmarks(bookmarks) {
+        const errors = [];
+        const warnings = [];
+        
+        if (!Array.isArray(bookmarks)) {
+            errors.push('书签数据必须是数组格式');
+            return { valid: false, errors, warnings };
+        }
+        
+        bookmarks.forEach((group, groupIndex) => {
+            if (typeof group !== 'object' || Array.isArray(group)) {
+                errors.push(`分组 #${groupIndex + 1} 格式错误：必须是对象`);
+                return;
+            }
+            
+            const groupKeys = Object.keys(group);
+            if (groupKeys.length !== 1) {
+                errors.push(`分组 #${groupIndex + 1} 应该只包含一个分组名称`);
+                return;
+            }
+            
+            const groupName = groupKeys[0];
+            const items = group[groupName];
+            
+            if (!Array.isArray(items)) {
+                errors.push(`分组 "${groupName}" 的内容必须是数组`);
+                return;
+            }
+            
+            items.forEach((item, itemIndex) => {
+                if (typeof item !== 'object' || Array.isArray(item)) {
+                    errors.push(`分组 "${groupName}" 中的项目 #${itemIndex + 1} 格式错误`);
+                    return;
+                }
+                
+                const itemKeys = Object.keys(item);
+                if (itemKeys.length !== 1) {
+                    errors.push(`分组 "${groupName}" 中的项目 #${itemIndex + 1} 应该只包含一个书签名称`);
+                    return;
+                }
+                
+                const bookmarkName = itemKeys[0];
+                const config = item[bookmarkName];
+                
+                if (!Array.isArray(config) || config.length === 0) {
+                    errors.push(`书签 "${bookmarkName}" 的配置无效`);
+                    return;
+                }
+                
+                const bookmarkData = config[0];
+                if (!bookmarkData.href) {
+                    errors.push(`书签 "${bookmarkName}" 缺少链接地址`);
+                }
+                
+                // 验证 URL
+                try {
+                    new URL(bookmarkData.href);
+                } catch (e) {
+                    errors.push(`书签 "${bookmarkName}" 的链接地址格式无效`);
+                }
+                
+                // 验证图标
+                if (bookmarkData.icon && !this.validateIcon(bookmarkData.icon)) {
+                    warnings.push(`书签 "${bookmarkName}" 的图标格式可能无效`);
+                }
+                
+                // 验证缩写长度
+                if (bookmarkData.abbr && bookmarkData.abbr.length > 2) {
+                    warnings.push(`书签 "${bookmarkName}" 的缩写过长，建议不超过2个字符`);
+                }
+            });
+        });
+        
+        return {
+            valid: errors.length === 0,
+            errors,
+            warnings
+        };
+    }
+}
+
+// 导出到全局
+window.BookmarkUtils = BookmarkUtils;
+
+// 创建全局Validator实例
+document.addEventListener('DOMContentLoaded', function() {
+    window.validator = new Validator();
+    window.validator.init();
+}); 

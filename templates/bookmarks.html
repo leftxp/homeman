@@ -2,100 +2,249 @@
 
 {% block title %}书签管理 - Homeman{% endblock %}
 
+{% block extra_css %}
+<style>
+    .quick-add-input {
+        width: 120px;
+        transition: width 0.3s ease;
+        font-size: 0.85rem;
+        height: 32px;
+    }
+    
+    .quick-add-input:focus {
+        width: 250px;
+    }
+    
+    .bookmark-checkbox {
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+        z-index: 10;
+    }
+    
+    .bookmark-card {
+        position: relative;
+        transition: transform 0.2s, box-shadow 0.2s;
+        overflow: hidden; /* 确保内容不会超出卡片边界 */
+        height: 80px; /* 固定较小的高度 */
+    }
+    
+    .bookmark-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .bookmark-actions {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        opacity: 0;
+        transition: opacity 0.2s;
+        z-index: 6;
+    }
+    
+    .bookmark-card:hover .bookmark-actions {
+        opacity: 1;
+    }
+    
+    .bookmark-content {
+        padding-right: 30px; /* 为右侧操作按钮留出空间 */
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+    .bookmark-content-with-checkbox {
+        margin-left: 22px; /* 为多选框留出空间 */
+    }
+    
+    .bookmark-title-area:hover {
+        background-color: rgba(0,0,0,0.05);
+        border-radius: 4px;
+    }
+    
+    .bookmark-title-link:hover {
+        color: #0d6efd !important;
+    }
+    
+    .bookmark-url-link:hover {
+        color: #6c757d !important;
+    }
+    
+    .group-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+    }
+    
+    .bookmark-icon-wrapper {
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+    
+    /* 多选模式下的特殊样式 */
+    .multi-select-mode .bookmark-actions {
+        right: 4px; /* 保持原位置 */
+    }
+    
+    /* 卡片内容布局优化 */
+    .bookmark-card .card-body {
+        padding: 6px; /* 减少内边距 */
+    }
+    
+    .bookmark-content .d-flex {
+        margin-bottom: 4px; /* 减少间距 */
+    }
+    
+    .bookmark-content .mb-2:last-child {
+        margin-bottom: 0; /* 移除最后元素的下边距 */
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row">
-    <div class="col-md-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1><i class="fas fa-bookmark"></i> 书签管理</h1>
-            <div>
-                <button type="button" class="btn btn-success" onclick="showAddGroupModal()">
-                    <i class="fas fa-plus"></i> 添加分组
-                </button>
+<div class="container-fluid px-2">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h1 class="h3 mb-0"><i class="fas fa-bookmark"></i> 书签管理</h1>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-success btn-sm" onclick="showAddGroupModal()">
+                        <i class="fas fa-plus"></i> 添加分组
+                    </button>
+                    <button type="button" class="btn btn-warning btn-sm" id="multiSelectBtn" onclick="toggleMultiSelect()">
+                        <i class="fas fa-check-square"></i> 多选模式
+                    </button>
+                    <button type="button" class="btn btn-danger btn-sm d-none" id="deleteSelectedBtn" onclick="deleteSelected()">
+                        <i class="fas fa-trash"></i> 删除选中
+                    </button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<div class="row">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-body">
-                <div id="bookmarks-container">
-                    {% if bookmarks %}
-                        {% for group in bookmarks %}
-                            {% set group_name = group.keys() | first %}
-                            {% set group_items = group[group_name] %}
-                            <div class="bookmark-group mb-4" data-group="{{ group_name }}">
-                                <div class="d-flex justify-content-between align-items-center mb-3">
-                                    <h4>{{ group_name }}</h4>
-                                    <div class="btn-group">
-                                        <button class="btn btn-sm btn-outline-primary" onclick="showAddBookmarkModal('{{ group_name }}')">
-                                            <i class="fas fa-plus"></i> 添加书签
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-warning" onclick="editGroup('{{ group_name }}')">
-                                            <i class="fas fa-edit"></i> 编辑
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger" onclick="deleteGroup('{{ group_name }}')">
-                                            <i class="fas fa-trash"></i> 删除
-                                        </button>
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body p-2">
+                    <div id="bookmarks-container">
+                        {% if bookmarks %}
+                            {% for group in bookmarks %}
+                                {% set group_name = group.keys() | first %}
+                                {% set group_items = group[group_name] %}
+                                <div class="bookmark-group mb-3" data-group="{{ group_name }}">
+                                    <div class="group-header d-flex justify-content-between align-items-center mb-2 py-2 px-3">
+                                        <div class="d-flex align-items-center flex-grow-1">
+                                            <i class="fas fa-grip-vertical text-muted me-2 group-handle" style="cursor: grab;"></i>
+                                            <h5 class="mb-0 me-3">{{ group_name }}</h5>
+                                            
+                                            <!-- 快速添加输入框 -->
+                                            <div class="quick-add-container">
+                                                <input type="url" 
+                                                       class="form-control quick-add-input" 
+                                                       placeholder="输入网址快速添加"
+                                                       data-group="{{ group_name }}"
+                                                       onkeypress="handleQuickAddKeypress(event, '{{ group_name }}')"
+                                                       onblur="handleQuickAddBlur(event, '{{ group_name }}')"
+                                                       onfocus="this.placeholder='粘贴网址后按回车添加'">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="btn-group">
+                                            <button class="btn btn-sm btn-outline-primary" onclick="showAddBookmarkModal('{{ group_name }}')" title="详细添加">
+                                                <i class="fas fa-plus"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-warning" onclick="editGroup('{{ group_name }}')" title="编辑分组">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="deleteGroup('{{ group_name }}')" title="删除分组">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
-                                
-                                <div class="row">
-                                    {% for item in group_items %}
-                                        {% set bookmark_name = item.keys() | first %}
-                                        {% set bookmark_config = item[bookmark_name] %}
-                                        {% set bookmark_data = bookmark_config[0] if bookmark_config %}
-                                        <div class="col-md-3 mb-3">
-                                            <div class="card bookmark-item">
-                                                <div class="card-body">
-                                                    <div class="d-flex justify-content-between align-items-start">
-                                                        <div class="bookmark-info">
-                                                            {% if bookmark_data.icon %}
-                                                                <img src="{{ bookmark_data.icon }}" alt="{{ bookmark_name }}" class="bookmark-icon me-2" style="width: 24px; height: 24px;">
-                                                            {% elif bookmark_data.abbr %}
-                                                                <span class="badge bg-primary me-2">{{ bookmark_data.abbr }}</span>
-                                                            {% endif %}
-                                                            <strong>{{ bookmark_name }}</strong>
+                                    
+                                    <div class="bookmark-items row g-2" data-group="{{ group_name }}">
+                                        {% for item in group_items %}
+                                            {% set bookmark_name = item.keys() | first %}
+                                            {% set bookmark_config = item[bookmark_name] %}
+                                            {% set bookmark_data = bookmark_config[0] if bookmark_config %}
+                                            <div class="col-lg-2 col-md-3 col-sm-4 col-6">
+                                                <div class="card bookmark-item bookmark-card h-100" data-bookmark="{{ bookmark_name }}" data-group="{{ group_name }}">
+                                                    <div class="card-body p-2 position-relative">
+                                                        <!-- 多选复选框 -->
+                                                        <input type="checkbox" class="bookmark-checkbox position-absolute d-none" 
+                                                               style="top: 4px; left: 4px;"
+                                                               data-group="{{ group_name }}" data-bookmark="{{ bookmark_name }}">
+                                                        
+                                                        <!-- 操作按钮 -->
+                                                        <div class="bookmark-actions">
+                                                            <div class="btn-group-vertical">
+                                                                <button class="btn btn-outline-warning" 
+                                                                        onclick="editBookmark('{{ group_name }}', '{{ bookmark_name }}')" 
+                                                                        title="编辑" 
+                                                                        style="font-size: 0.7rem; padding: 2px 4px; line-height: 1.2; min-width: 22px; height: 22px;">
+                                                                    <i class="fas fa-edit"></i>
+                                                                </button>
+                                                                <button class="btn btn-outline-danger" 
+                                                                        onclick="deleteBookmark('{{ group_name }}', '{{ bookmark_name }}')" 
+                                                                        title="删除" 
+                                                                        style="font-size: 0.7rem; padding: 2px 4px; line-height: 1.2; min-width: 22px; height: 22px;">
+                                                                    <i class="fas fa-trash"></i>
+                                                                </button>
+                                                            </div>
                                                         </div>
-                                                        <div class="dropdown">
-                                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                                                <i class="fas fa-ellipsis-v"></i>
-                                                            </button>
-                                                            <ul class="dropdown-menu">
-                                                                <li><a class="dropdown-item" href="#" onclick="editBookmark('{{ group_name }}', '{{ bookmark_name }}')">
-                                                                    <i class="fas fa-edit"></i> 编辑
-                                                                </a></li>
-                                                                <li><a class="dropdown-item text-danger" href="#" onclick="deleteBookmark('{{ group_name }}', '{{ bookmark_name }}')">
-                                                                    <i class="fas fa-trash"></i> 删除
-                                                                </a></li>
-                                                            </ul>
+                                                        
+                                                        <!-- 书签内容 -->
+                                                        <div class="bookmark-content">
+                                                            <div class="d-flex align-items-center mb-2 bookmark-title-area" style="cursor: grab;">
+                                                                <div class="bookmark-icon-wrapper me-2">
+                                                                    {% if bookmark_data.icon %}
+                                                                        <img src="{{ bookmark_data.icon }}" alt="{{ bookmark_name }}" 
+                                                                             class="bookmark-icon" style="width: 16px; height: 16px; object-fit: cover;">
+                                                                    {% elif bookmark_data.abbr %}
+                                                                        <span class="badge bg-primary" style="font-size: 0.6rem; padding: 2px 4px;">{{ bookmark_data.abbr }}</span>
+                                                                    {% else %}
+                                                                        <i class="fas fa-globe text-muted" style="font-size: 0.8rem;"></i>
+                                                                    {% endif %}
+                                                                </div>
+                                                                <a href="{{ bookmark_data.href }}" target="_blank" 
+                                                                   class="text-decoration-none text-dark text-truncate bookmark-title-link" 
+                                                                   style="font-size: 0.85rem; line-height: 1.2; font-weight: bold;" 
+                                                                   title="{{ bookmark_name }} - 点击打开链接">{{ bookmark_name }}</a>
+                                                            </div>
+                                                            
+                                                            <div class="mb-2">
+                                                                <a href="{{ bookmark_data.href }}" target="_blank" 
+                                                                   class="text-muted text-decoration-none bookmark-url-link"
+                                                                   style="font-size: 0.75rem; line-height: 1.3;" 
+                                                                   title="点击打开: {{ bookmark_data.description or bookmark_data.href }}">
+                                                                    <small class="text-truncate d-block">{{ bookmark_data.description or bookmark_data.href }}</small>
+                                                                </a>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                    <div class="mt-2">
-                                                        <small class="text-muted">{{ bookmark_data.description or bookmark_data.href }}</small>
-                                                        <br>
-                                                        <a href="{{ bookmark_data.href }}" target="_blank" class="text-decoration-none">
-                                                            <i class="fas fa-external-link-alt"></i> {{ bookmark_data.href }}
-                                                        </a>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    {% endfor %}
+                                        {% endfor %}
+                                    </div>
                                 </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="fas fa-bookmark fa-3x text-muted mb-3"></i>
+                                <h4>还没有书签</h4>
+                                <p class="text-muted">点击"添加分组"开始创建您的第一个书签分组</p>
+                                <button class="btn btn-primary" onclick="showAddGroupModal()">
+                                    <i class="fas fa-plus"></i> 添加分组
+                                </button>
                             </div>
-                        {% endfor %}
-                    {% else %}
-                        <div class="text-center py-5">
-                            <i class="fas fa-bookmark fa-4x text-muted mb-3"></i>
-                            <h4>还没有书签</h4>
-                            <p class="text-muted">点击"添加分组"开始创建您的第一个书签分组</p>
-                            <button class="btn btn-primary" onclick="showAddGroupModal()">
-                                <i class="fas fa-plus"></i> 添加分组
-                            </button>
-                        </div>
-                    {% endif %}
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
@@ -111,16 +260,16 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form id="groupForm">
+                <form id="groupForm" onsubmit="return saveGroup(event)">
                     <div class="mb-3">
                         <label for="groupName" class="form-label">分组名称</label>
-                        <input type="text" class="form-control" id="groupName" required>
+                        <input type="text" class="form-control" id="groupName" required autocomplete="off">
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <button type="button" class="btn btn-primary" onclick="saveGroup()">保存</button>
+                <button type="submit" form="groupForm" class="btn btn-primary">保存</button>
             </div>
         </div>
     </div>
@@ -135,7 +284,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form id="bookmarkForm">
+                <form id="bookmarkForm" onsubmit="return saveBookmark(event)">
                     <input type="hidden" id="bookmarkGroup">
                     <input type="hidden" id="originalBookmarkName">
                     
@@ -149,7 +298,7 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label for="bookmarkHref" class="form-label">链接地址</label>
-                                <input type="url" class="form-control" id="bookmarkHref" required>
+                                <input type="url" class="form-control" id="bookmarkHref" required onblur="autoFillBookmarkInfo()">
                             </div>
                         </div>
                     </div>
@@ -179,7 +328,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
-                <button type="button" class="btn btn-primary" onclick="saveBookmark()">保存</button>
+                <button type="submit" form="bookmarkForm" class="btn btn-primary">保存</button>
             </div>
         </div>
     </div>
@@ -187,16 +336,218 @@
 {% endblock %}
 
 {% block extra_js %}
+<!-- SortableJS CDN -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+
 <script>
-    let bookmarksData = {{ bookmarks | tojson }};
+    let bookmarksData = {{ bookmarks | tojson | safe }} || [];
     let currentEditingGroup = null;
     let currentEditingBookmark = null;
+    let isMultiSelectMode = false;
+    let groupSortable = null;
+    let bookmarkSortables = [];
+
+    // 初始化拖拽功能
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeDragAndDrop();
+    });
+
+    function initializeDragAndDrop() {
+        // 销毁现有的sortable实例
+        if (groupSortable) {
+            groupSortable.destroy();
+        }
+        bookmarkSortables.forEach(sortable => sortable.destroy());
+        bookmarkSortables = [];
+
+        // 分组拖拽排序
+        const container = document.getElementById('bookmarks-container');
+        if (container) {
+            groupSortable = Sortable.create(container, {
+                handle: '.group-handle',
+                animation: 150,
+                onEnd: function(evt) {
+                    const item = bookmarksData.splice(evt.oldIndex, 1)[0];
+                    bookmarksData.splice(evt.newIndex, 0, item);
+                    saveBookmarks();
+                }
+            });
+        }
+
+        // 书签拖拽排序和移动
+        document.querySelectorAll('.bookmark-items').forEach(container => {
+            const sortable = Sortable.create(container, {
+                group: 'bookmarks',
+                handle: '.bookmark-title-area',
+                animation: 150,
+                onEnd: function(evt) {
+                    const oldGroupName = evt.from.dataset.group;
+                    const newGroupName = evt.to.dataset.group;
+                    
+                    const oldGroupIndex = bookmarksData.findIndex(g => Object.keys(g)[0] === oldGroupName);
+                    const newGroupIndex = bookmarksData.findIndex(g => Object.keys(g)[0] === newGroupName);
+                    
+                    if (oldGroupIndex !== -1 && newGroupIndex !== -1) {
+                        const bookmark = bookmarksData[oldGroupIndex][oldGroupName].splice(evt.oldIndex, 1)[0];
+                        bookmarksData[newGroupIndex][newGroupName].splice(evt.newIndex, 0, bookmark);
+                        saveBookmarks();
+                    }
+                }
+            });
+            bookmarkSortables.push(sortable);
+        });
+    }
+
+    // 自动补充协议前缀
+    function normalizeUrl(url) {
+        if (!url) return url;
+        
+        url = url.trim();
+        
+        // 如果已经有协议，直接返回
+        if (/^https?:\/\//i.test(url)) {
+            return url;
+        }
+        
+        // 如果是本地地址或IP，使用http
+        if (/^(localhost|127\.0\.0\.1|\d+\.\d+\.\d+\.\d+)/i.test(url)) {
+            return 'http://' + url;
+        }
+        
+        // 其他情况使用http（更好的兼容性）
+        return 'http://' + url;
+    }
+
+    // 简化的网站信息提取函数
+    function extractSiteInfo(url) {
+        try {
+            const normalizedUrl = normalizeUrl(url);
+            const urlObj = new URL(normalizedUrl);
+            const hostname = urlObj.hostname;
+            
+            // 去掉 www. 前缀
+            const domain = hostname.replace(/^www\./, '');
+            
+            // 获取主域名（去掉子域名）
+            const parts = domain.split('.');
+            let siteName = parts[0];
+            
+            // 常见网站的特殊处理
+            const siteNameMap = {
+                'github': 'GitHub',
+                'gitlab': 'GitLab',
+                'stackoverflow': 'Stack Overflow',
+                'youtube': 'YouTube',
+                'google': 'Google',
+                'microsoft': 'Microsoft',
+                'apple': 'Apple',
+                'amazon': 'Amazon',
+                'reddit': 'Reddit',
+                'twitter': 'Twitter',
+                'facebook': 'Facebook',
+                'linkedin': 'LinkedIn',
+                'instagram': 'Instagram',
+                'medium': 'Medium',
+                'netflix': 'Netflix',
+                'spotify': 'Spotify'
+            };
+            
+            // 使用映射表或首字母大写
+            const displayName = siteNameMap[siteName.toLowerCase()] || 
+                               siteName.charAt(0).toUpperCase() + siteName.slice(1);
+            
+            // 生成缩写
+            let abbr = '';
+            if (displayName.includes(' ')) {
+                // 多个单词：取每个单词的首字母
+                abbr = displayName.split(' ')
+                    .map(word => word.charAt(0))
+                    .join('')
+                    .substring(0, 2)
+                    .toUpperCase();
+            } else {
+                // 单个单词：取前两个字符
+                abbr = displayName.substring(0, 2).toUpperCase();
+            }
+            
+            return {
+                name: displayName,
+                abbr: abbr,
+                domain: domain,
+                normalizedUrl: normalizedUrl
+            };
+        } catch (e) {
+            console.warn('URL 解析失败:', e);
+            return {
+                name: '',
+                abbr: '',
+                domain: '',
+                normalizedUrl: normalizeUrl(url)
+            };
+        }
+    }
+
+    // 快速添加功能
+    function handleQuickAddKeypress(event, groupName) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            const input = event.target;
+            const url = input.value.trim();
+            
+            if (!url) {
+                showError('请输入网址');
+                return;
+            }
+
+            // 自动补充协议并验证URL
+            const normalizedUrl = normalizeUrl(url);
+            try {
+                new URL(normalizedUrl); // 验证URL格式
+            } catch (e) {
+                showError('请输入有效的网址');
+                return;
+            }
+
+            // 提取网站信息
+            const siteInfo = extractSiteInfo(url);
+            const name = siteInfo.name || 'New Bookmark';
+            const abbr = siteInfo.abbr || '';
+
+            // 构建书签数据
+            const bookmarkData = { href: siteInfo.normalizedUrl };
+            if (abbr) bookmarkData.abbr = abbr;
+
+            // 找到分组并添加书签
+            const groupIndex = bookmarksData.findIndex(group => Object.keys(group)[0] === groupName);
+            if (groupIndex !== -1) {
+                bookmarksData[groupIndex][groupName].push({ [name]: [bookmarkData] });
+                
+                // 显示成功消息
+                showSuccess(`已添加书签 "${name}" 到分组 "${groupName}"`);
+                
+                // 清空输入框
+                input.value = '';
+                input.blur();
+                
+                // 保存数据
+                saveBookmarks();
+            } else {
+                showError('分组不存在');
+            }
+        }
+    }
+
+    function handleQuickAddBlur(event, groupName) {
+        // 失去焦点时恢复默认提示文字
+        event.target.placeholder = '输入网址快速添加';
+    }
 
     function showAddGroupModal() {
         currentEditingGroup = null;
         document.getElementById('groupModalTitle').textContent = '添加分组';
         document.getElementById('groupName').value = '';
         new bootstrap.Modal(document.getElementById('groupModal')).show();
+        setTimeout(() => document.getElementById('groupName').focus(), 100);
     }
 
     function editGroup(groupName) {
@@ -204,30 +555,34 @@
         document.getElementById('groupModalTitle').textContent = '编辑分组';
         document.getElementById('groupName').value = groupName;
         new bootstrap.Modal(document.getElementById('groupModal')).show();
+        setTimeout(() => document.getElementById('groupName').focus(), 100);
     }
 
-    function saveGroup() {
+    function saveGroup(event) {
+        if (event) {
+            event.preventDefault();
+        }
+        
         const groupName = document.getElementById('groupName').value.trim();
         if (!groupName) {
-            alert('请输入分组名称');
-            return;
+            showError('请输入分组名称');
+            return false;
         }
 
         if (currentEditingGroup) {
-            // 编辑现有分组
             const groupIndex = bookmarksData.findIndex(group => Object.keys(group)[0] === currentEditingGroup);
             if (groupIndex !== -1) {
                 const items = bookmarksData[groupIndex][currentEditingGroup];
                 bookmarksData[groupIndex] = { [groupName]: items };
             }
         } else {
-            // 添加新分组
             bookmarksData.push({ [groupName]: [] });
         }
 
         saveBookmarks();
         var modal = bootstrap.Modal.getInstance(document.getElementById('groupModal'));
         modal.hide();
+        return false;
     }
 
     function deleteGroup(groupName) {
@@ -252,13 +607,33 @@
         document.getElementById('bookmarkDescription').value = '';
         
         new bootstrap.Modal(document.getElementById('bookmarkModal')).show();
+        setTimeout(() => document.getElementById('bookmarkName').focus(), 100);
+    }
+
+    function autoFillBookmarkInfo() {
+        const href = document.getElementById('bookmarkHref').value.trim();
+        const nameField = document.getElementById('bookmarkName');
+        const abbrField = document.getElementById('bookmarkAbbr');
+        
+        if (href && !nameField.value) {
+            // 自动补充协议
+            const normalizedUrl = normalizeUrl(href);
+            document.getElementById('bookmarkHref').value = normalizedUrl;
+            
+            const siteInfo = extractSiteInfo(href);
+            if (siteInfo.name) {
+                nameField.value = siteInfo.name;
+                if (!abbrField.value) {
+                    abbrField.value = siteInfo.abbr;
+                }
+            }
+        }
     }
 
     function editBookmark(groupName, bookmarkName) {
         currentEditingGroup = groupName;
         currentEditingBookmark = bookmarkName;
         
-        // 找到书签数据
         const group = bookmarksData.find(g => Object.keys(g)[0] === groupName);
         const bookmark = group[groupName].find(b => Object.keys(b)[0] === bookmarkName);
         const bookmarkConfig = bookmark[bookmarkName];
@@ -268,7 +643,6 @@
         document.getElementById('bookmarkGroup').value = groupName;
         document.getElementById('originalBookmarkName').value = bookmarkName;
         
-        // 填充表单
         document.getElementById('bookmarkName').value = bookmarkName;
         document.getElementById('bookmarkHref').value = bookmarkData.href || '';
         document.getElementById('bookmarkIcon').value = bookmarkData.icon || '';
@@ -276,57 +650,61 @@
         document.getElementById('bookmarkDescription').value = bookmarkData.description || '';
         
         new bootstrap.Modal(document.getElementById('bookmarkModal')).show();
+        setTimeout(() => document.getElementById('bookmarkName').focus(), 100);
     }
 
-    function saveBookmark() {
+    function saveBookmark(event) {
+        if (event) {
+            event.preventDefault();
+        }
+
         const groupName = document.getElementById('bookmarkGroup').value;
         const originalName = document.getElementById('originalBookmarkName').value;
         const name = document.getElementById('bookmarkName').value.trim();
-        const href = document.getElementById('bookmarkHref').value.trim();
+        let href = document.getElementById('bookmarkHref').value.trim();
         const icon = document.getElementById('bookmarkIcon').value.trim();
         const abbr = document.getElementById('bookmarkAbbr').value.trim();
         const description = document.getElementById('bookmarkDescription').value.trim();
 
         if (!name || !href) {
-            alert('请填写书签名称和链接地址');
-            return;
+            showError('请填写书签名称和链接地址');
+            return false;
         }
 
-        // 验证 URL 格式
+        // 自动补充协议
+        href = normalizeUrl(href);
+
         try {
             new URL(href);
         } catch (e) {
-            alert('请输入有效的 URL 地址');
-            return;
+            showError('请输入有效的 URL 地址');
+            return false;
         }
 
-        // 构建书签数据
         const bookmarkData = { href };
         if (icon) bookmarkData.icon = icon;
         if (abbr) bookmarkData.abbr = abbr;
         if (description) bookmarkData.description = description;
 
-        // 找到分组
         const groupIndex = bookmarksData.findIndex(group => Object.keys(group)[0] === groupName);
         if (groupIndex === -1) {
-            alert('分组不存在');
-            return;
+            showError('分组不存在');
+            return false;
         }
 
         if (currentEditingBookmark) {
-            // 编辑现有书签
             const bookmarkIndex = bookmarksData[groupIndex][groupName].findIndex(b => Object.keys(b)[0] === originalName);
             if (bookmarkIndex !== -1) {
                 bookmarksData[groupIndex][groupName][bookmarkIndex] = { [name]: [bookmarkData] };
             }
         } else {
-            // 添加新书签
             bookmarksData[groupIndex][groupName].push({ [name]: [bookmarkData] });
         }
 
         saveBookmarks();
         var modal = bootstrap.Modal.getInstance(document.getElementById('bookmarkModal'));
         modal.hide();
+        return false;
     }
 
     function deleteBookmark(groupName, bookmarkName) {
@@ -336,6 +714,64 @@
                 bookmarksData[groupIndex][groupName] = bookmarksData[groupIndex][groupName].filter(b => Object.keys(b)[0] !== bookmarkName);
                 saveBookmarks();
             }
+        }
+    }
+
+    function toggleMultiSelect() {
+        isMultiSelectMode = !isMultiSelectMode;
+        const checkboxes = document.querySelectorAll('.bookmark-checkbox');
+        const multiSelectBtn = document.getElementById('multiSelectBtn');
+        const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+        const bookmarkContainer = document.getElementById('bookmarks-container');
+        
+        if (isMultiSelectMode) {
+            checkboxes.forEach(cb => cb.classList.remove('d-none'));
+            // 为书签内容添加左边距
+            document.querySelectorAll('.bookmark-content').forEach(content => {
+                content.classList.add('bookmark-content-with-checkbox');
+            });
+            bookmarkContainer.classList.add('multi-select-mode');
+            multiSelectBtn.innerHTML = '<i class="fas fa-times"></i> 退出多选';
+            multiSelectBtn.classList.remove('btn-warning');
+            multiSelectBtn.classList.add('btn-secondary');
+            deleteSelectedBtn.classList.remove('d-none');
+        } else {
+            checkboxes.forEach(cb => {
+                cb.classList.add('d-none');
+                cb.checked = false;
+            });
+            // 移除书签内容的左边距
+            document.querySelectorAll('.bookmark-content').forEach(content => {
+                content.classList.remove('bookmark-content-with-checkbox');
+            });
+            bookmarkContainer.classList.remove('multi-select-mode');
+            multiSelectBtn.innerHTML = '<i class="fas fa-check-square"></i> 多选模式';
+            multiSelectBtn.classList.remove('btn-secondary');
+            multiSelectBtn.classList.add('btn-warning');
+            deleteSelectedBtn.classList.add('d-none');
+        }
+    }
+
+    function deleteSelected() {
+        const selectedCheckboxes = document.querySelectorAll('.bookmark-checkbox:checked');
+        if (selectedCheckboxes.length === 0) {
+            showError('请选择要删除的书签');
+            return;
+        }
+
+        if (confirm(`确定要删除选中的 ${selectedCheckboxes.length} 个书签吗？`)) {
+            selectedCheckboxes.forEach(checkbox => {
+                const groupName = checkbox.dataset.group;
+                const bookmarkName = checkbox.dataset.bookmark;
+                
+                const groupIndex = bookmarksData.findIndex(group => Object.keys(group)[0] === groupName);
+                if (groupIndex !== -1) {
+                    bookmarksData[groupIndex][groupName] = bookmarksData[groupIndex][groupName].filter(b => Object.keys(b)[0] !== bookmarkName);
+                }
+            });
+            
+            saveBookmarks();
+            toggleMultiSelect();
         }
     }
 
@@ -352,13 +788,81 @@
             if (data.status === 'success') {
                 location.reload();
             } else {
-                alert('保存失败: ' + data.message);
+                showError('保存失败: ' + data.message);
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('保存失败: ' + error.message);
+            showError('保存失败: ' + error.message);
         });
+    }
+
+    // 简单的提示函数
+    function showSuccess(message) {
+        // 使用Validator实例的方法
+        if (window.validator && typeof window.validator.showSuccess === 'function') {
+            window.validator.showSuccess(message);
+        } else {
+            // 创建Bootstrap Toast
+            createToast(message, 'success');
+        }
+    }
+
+    function showError(message) {
+        // 使用Validator实例的方法
+        if (window.validator && typeof window.validator.showError === 'function') {
+            window.validator.showError(message);
+        } else {
+            // 创建Bootstrap Toast
+            createToast(message, 'danger');
+        }
+    }
+
+    function createToast(message, type) {
+        // 创建 toast 容器（如果不存在）
+        let toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.id = 'toast-container';
+            toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+            toastContainer.style.zIndex = '9999';
+            document.body.appendChild(toastContainer);
+        }
+
+        // 创建 toast
+        const toastId = 'toast-' + Date.now();
+        const toast = document.createElement('div');
+        toast.id = toastId;
+        toast.className = `toast align-items-center text-white bg-${type} border-0`;
+        toast.setAttribute('role', 'alert');
+        toast.innerHTML = `
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${escapeHtml(message)}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        `;
+
+        toastContainer.appendChild(toast);
+
+        // 显示 toast
+        const bsToast = new bootstrap.Toast(toast, {
+            autohide: true,
+            delay: type === 'success' ? 3000 : 5000
+        });
+        bsToast.show();
+
+        // 自动移除
+        toast.addEventListener('hidden.bs.toast', () => {
+            toast.remove();
+        });
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 </script>
 {% endblock %} 
