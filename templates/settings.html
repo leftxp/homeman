@@ -2,10 +2,71 @@
 
 {% block title %}全局设置 - Homeman{% endblock %}
 
+{% block extra_css %}
+<style>
+.config-section {
+    margin-bottom: 1.5rem;
+}
+.config-section .card-body {
+    padding: 1rem;
+}
+.config-section .mb-3 {
+    margin-bottom: 0.75rem !important;
+}
+.config-section .form-text {
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+}
+.compact-row {
+    margin-bottom: 1rem;
+}
+.compact-col {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+.settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+}
+@media (max-width: 992px) {
+    .settings-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+@media (max-width: 768px) {
+    .settings-grid {
+        grid-template-columns: 1fr;
+    }
+}
+.form-group-inline {
+    display: flex;
+    gap: 1rem;
+}
+.form-group-inline > div {
+    flex: 1;
+}
+@media (max-width: 768px) {
+    .form-group-inline {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .form-check-inline {
+        display: block;
+        margin-bottom: 0.5rem;
+    }
+    .compact-col {
+        padding-left: 0.25rem;
+        padding-right: 0.25rem;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="row">
     <div class="col-md-12">
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
             <h1><i class="fas fa-cog"></i> 全局设置</h1>
             <div>
                 <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
@@ -17,36 +78,78 @@
 </div>
 
 <form method="POST" action="{{ url_for('save_settings') }}" id="settingsForm">
-    <div class="row">
+    <!-- 使用网格布局 -->
+    <div class="settings-grid">
         <!-- 基础设置 -->
-        <div class="col-md-6">
-            <div class="card config-section">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-info-circle"></i> 基础设置
-                    </h5>
+        <div class="card config-section">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-info-circle"></i> 基础设置
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="title" class="form-label">网站标题</label>
+                    <input type="text" class="form-control form-control-sm" id="title" name="title" 
+                           value="{{ settings.title }}" placeholder="Homepage">
                 </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label for="title" class="form-label">网站标题</label>
-                        <input type="text" class="form-control" id="title" name="title" 
-                               value="{{ settings.title }}" placeholder="Homepage">
-                        <div class="form-text">显示在浏览器标签页的标题</div>
-                    </div>
-                    
-                    <div class="mb-3">
+                
+                <div class="mb-3">
+                    <label for="description" class="form-label">网站描述</label>
+                    <textarea class="form-control form-control-sm" id="description" name="description" 
+                              rows="2" placeholder="网站描述">{{ settings.description }}</textarea>
+                </div>
+                
+                <div class="form-group-inline">
+                    <div>
                         <label for="startUrl" class="form-label">起始 URL</label>
-                        <input type="text" class="form-control" id="startUrl" name="startUrl" 
+                        <input type="text" class="form-control form-control-sm" id="startUrl" name="startUrl" 
                                value="{{ settings.startUrl }}" placeholder="/">
-                        <div class="form-text">用于安装应用时的起始 URL</div>
                     </div>
-                    
-                    <div class="mb-3">
+                    <div>
+                        <label for="instanceName" class="form-label">实例名称</label>
+                        <input type="text" class="form-control form-control-sm" id="instanceName" name="instanceName" 
+                               value="{{ settings.instanceName }}" placeholder="public">
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="base" class="form-label">基础 URL</label>
+                    <input type="text" class="form-control form-control-sm" id="base" name="base" 
+                           value="{{ settings.base }}" placeholder="http://host.local/homepage">
+                    <div class="form-text">代理配置中可能需要</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="favicon" class="form-label">自定义图标</label>
+                    <input type="text" class="form-control form-control-sm" id="favicon" name="favicon" 
+                           value="{{ settings.favicon }}" placeholder="https://example.com/favicon.ico">
+                </div>
+            </div>
+        </div>
+        
+        <!-- 外观与区域设置 -->
+        <div class="card config-section">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-palette"></i> 外观与区域
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="form-group-inline">
+                    <div>
+                        <label for="theme" class="form-label">主题</label>
+                        <select class="form-select form-select-sm" id="theme" name="theme">
+                            <option value="light" {% if settings.theme == 'light' %}selected{% endif %}>浅色</option>
+                            <option value="dark" {% if settings.theme == 'dark' %}selected{% endif %}>深色</option>
+                        </select>
+                    </div>
+                    <div>
                         <label for="language" class="form-label">语言</label>
-                        <select class="form-select" id="language" name="language">
+                        <select class="form-select form-select-sm" id="language" name="language">
                             {% set languages = [
-                                ('en', 'English'),
                                 ('zh-CN', '简体中文'),
+                                ('en', 'English'),
                                 ('zh-Hant', '繁体中文'),
                                 ('ca', 'Català'),
                                 ('de', 'Deutsch'),
@@ -70,221 +173,314 @@
                             {% endfor %}
                         </select>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="base" class="form-label">基础 URL</label>
-                        <input type="text" class="form-control" id="base" name="base" 
-                               value="{{ settings.base }}" placeholder="http://host.local/homepage">
-                        <div class="form-text">在某些代理配置中可能需要设置</div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="favicon" class="form-label">自定义图标</label>
-                        <input type="text" class="form-control" id="favicon" name="favicon" 
-                               value="{{ settings.favicon }}" placeholder="https://example.com/favicon.ico">
-                        <div class="form-text">网站图标的 URL 地址</div>
-                    </div>
                 </div>
-            </div>
-        </div>
-        
-        <!-- 外观设置 -->
-        <div class="col-md-6">
-            <div class="card config-section">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-palette"></i> 外观设置
-                    </h5>
+                
+                <div class="mb-3">
+                    <label for="color" class="form-label">颜色方案</label>
+                    <select class="form-select form-select-sm" id="color" name="color">
+                        {% set colors = [
+                            ('blue', 'Blue'),
+                            ('slate', 'Slate'),
+                            ('gray', 'Gray'),
+                            ('zinc', 'Zinc'),
+                            ('neutral', 'Neutral'),
+                            ('stone', 'Stone'),
+                            ('amber', 'Amber'),
+                            ('yellow', 'Yellow'),
+                            ('lime', 'Lime'),
+                            ('green', 'Green'),
+                            ('emerald', 'Emerald'),
+                            ('teal', 'Teal'),
+                            ('cyan', 'Cyan'),
+                            ('sky', 'Sky'),
+                            ('indigo', 'Indigo'),
+                            ('violet', 'Violet'),
+                            ('purple', 'Purple'),
+                            ('fuchsia', 'Fuchsia'),
+                            ('pink', 'Pink'),
+                            ('rose', 'Rose'),
+                            ('red', 'Red'),
+                            ('white', 'White')
+                        ] %}
+                        {% for color_code, color_name in colors %}
+                            <option value="{{ color_code }}" {% if settings.color == color_code %}selected{% endif %}>
+                                {{ color_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
                 </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label for="theme" class="form-label">主题</label>
-                        <select class="form-select" id="theme" name="theme">
-                            <option value="light" {% if settings.theme == 'light' %}selected{% endif %}>浅色</option>
-                            <option value="dark" {% if settings.theme == 'dark' %}selected{% endif %}>深色</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="color" class="form-label">颜色方案</label>
-                        <select class="form-select" id="color" name="color">
-                            {% set colors = [
-                                ('slate', 'Slate'),
-                                ('gray', 'Gray'),
-                                ('zinc', 'Zinc'),
-                                ('neutral', 'Neutral'),
-                                ('stone', 'Stone'),
-                                ('amber', 'Amber'),
-                                ('yellow', 'Yellow'),
-                                ('lime', 'Lime'),
-                                ('green', 'Green'),
-                                ('emerald', 'Emerald'),
-                                ('teal', 'Teal'),
-                                ('cyan', 'Cyan'),
-                                ('sky', 'Sky'),
-                                ('blue', 'Blue'),
-                                ('indigo', 'Indigo'),
-                                ('violet', 'Violet'),
-                                ('purple', 'Purple'),
-                                ('fuchsia', 'Fuchsia'),
-                                ('pink', 'Pink'),
-                                ('rose', 'Rose'),
-                                ('red', 'Red'),
-                                ('white', 'White')
-                            ] %}
-                            {% for color_code, color_name in colors %}
-                                <option value="{{ color_code }}" {% if settings.color == color_code %}selected{% endif %}>
-                                    {{ color_name }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3">
+                
+                <div class="form-group-inline">
+                    <div>
                         <label for="headerStyle" class="form-label">页眉样式</label>
-                        <select class="form-select" id="headerStyle" name="headerStyle">
+                        <select class="form-select form-select-sm" id="headerStyle" name="headerStyle">
                             <option value="underlined" {% if settings.headerStyle == 'underlined' %}selected{% endif %}>下划线</option>
                             <option value="boxed" {% if settings.headerStyle == 'boxed' %}selected{% endif %}>方框</option>
                             <option value="clean" {% if settings.headerStyle == 'clean' %}selected{% endif %}>简洁</option>
                             <option value="boxedWidgets" {% if settings.headerStyle == 'boxedWidgets' %}selected{% endif %}>方框小工具</option>
                         </select>
                     </div>
-                    
-                    <div class="mb-3">
+                    <div>
                         <label for="iconStyle" class="form-label">图标样式</label>
-                        <select class="form-select" id="iconStyle" name="iconStyle">
+                        <select class="form-select form-select-sm" id="iconStyle" name="iconStyle">
                             <option value="gradient" {% if settings.iconStyle == 'gradient' %}selected{% endif %}>渐变</option>
                             <option value="theme" {% if settings.iconStyle == 'theme' %}selected{% endif %}>主题</option>
                         </select>
                     </div>
-                    
-                    <div class="mb-3">
+                </div>
+                
+                <div class="form-group-inline">
+                    <div>
+                        <label for="statusStyle" class="form-label">状态样式</label>
+                        <select class="form-select form-select-sm" id="statusStyle" name="statusStyle">
+                            <option value="" {% if settings.statusStyle == '' %}selected{% endif %}>默认</option>
+                            <option value="dot" {% if settings.statusStyle == 'dot' %}selected{% endif %}>圆点</option>
+                            <option value="basic" {% if settings.statusStyle == 'basic' %}selected{% endif %}>基本</option>
+                        </select>
+                    </div>
+                    <div>
                         <label for="target" class="form-label">链接目标</label>
-                        <select class="form-select" id="target" name="target">
-                            <option value="_self" {% if settings.target == '_self' %}selected{% endif %}>当前窗口</option>
+                        <select class="form-select form-select-sm" id="target" name="target">
                             <option value="_blank" {% if settings.target == '_blank' %}selected{% endif %}>新标签页</option>
+                            <option value="_self" {% if settings.target == '_self' %}selected{% endif %}>当前窗口</option>
                             <option value="_top" {% if settings.target == '_top' %}selected{% endif %}>新窗口</option>
                         </select>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-    
-    <div class="row">
-        <!-- 显示设置 -->
-        <div class="col-md-6">
-            <div class="card config-section">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-eye"></i> 显示设置
-                    </h5>
+        
+        <!-- 背景与显示设置 -->
+        <div class="card config-section">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-image"></i> 背景与显示
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="background" class="form-label">背景图片</label>
+                    <input type="text" class="form-control form-control-sm" id="background" name="background" 
+                           value="{% if settings.background is string %}{{ settings.background }}{% elif settings.background is mapping and settings.background.image is defined %}{{ settings.background.image }}{% endif %}" 
+                           placeholder="https://example.com/background.jpg">
                 </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="hideVersion" name="hideVersion" 
-                                   value="true" {% if settings.hideVersion %}checked{% endif %}>
-                            <label class="form-check-label" for="hideVersion">
-                                隐藏版本信息
-                            </label>
-                            <div class="form-text">隐藏页面底部的版本显示</div>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="showStats" name="showStats" 
-                                   value="true" {% if settings.showStats %}checked{% endif %}>
-                            <label class="form-check-label" for="showStats">
-                                显示 Docker 统计
-                            </label>
-                            <div class="form-text">在全局显示 Docker 统计信息</div>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="statusStyle" class="form-label">状态样式</label>
-                        <select class="form-select" id="statusStyle" name="statusStyle">
-                            <option value="" {% if settings.statusStyle == '' %}selected{% endif %}>默认</option>
-                            <option value="dot" {% if settings.statusStyle == 'dot' %}selected{% endif %}>圆点</option>
-                            <option value="basic" {% if settings.statusStyle == 'basic' %}selected{% endif %}>基本</option>
+                
+                <div class="form-group-inline">
+                    <div>
+                        <label for="cardBlur" class="form-label">卡片模糊</label>
+                        <select class="form-select form-select-sm" id="cardBlur" name="cardBlur">
+                            <option value="" {% if settings.cardBlur == '' %}selected{% endif %}>无</option>
+                            <option value="xs" {% if settings.cardBlur == 'xs' %}selected{% endif %}>极小</option>
+                            <option value="sm" {% if settings.cardBlur == 'sm' %}selected{% endif %}>小</option>
+                            <option value="md" {% if settings.cardBlur == 'md' %}selected{% endif %}>中等</option>
+                            <option value="lg" {% if settings.cardBlur == 'lg' %}selected{% endif %}>大</option>
+                            <option value="xl" {% if settings.cardBlur == 'xl' %}selected{% endif %}>极大</option>
                         </select>
-                        <div class="form-text">Docker/K8s 状态、站点监控和 ping 的显示样式</div>
+                    </div>
+                    <div>
+                        <label for="logpath" class="form-label">日志路径</label>
+                        <input type="text" class="form-control form-control-sm" id="logpath" name="logpath" 
+                               value="{{ settings.logpath }}" placeholder="/app/logs">
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="hideVersion" name="hideVersion" 
+                               value="true" {% if settings.hideVersion %}checked{% endif %}>
+                        <label class="form-check-label" for="hideVersion">隐藏版本</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="showStats" name="showStats" 
+                               value="true" {% if settings.showStats %}checked{% endif %}>
+                        <label class="form-check-label" for="showStats">显示统计</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="hideErrors" name="hideErrors" 
+                               value="true" {% if settings.hideErrors %}checked{% endif %}>
+                        <label class="form-check-label" for="hideErrors">隐藏错误</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="disableUpdateCheck" name="disableUpdateCheck" 
+                               value="true" {% if settings.disableUpdateCheck %}checked{% endif %}>
+                        <label class="form-check-label" for="disableUpdateCheck">禁用更新检查</label>
                     </div>
                 </div>
             </div>
         </div>
         
         <!-- 布局设置 -->
-        <div class="col-md-6">
-            <div class="card config-section">
-                <div class="card-header">
-                    <h5 class="card-title mb-0">
-                        <i class="fas fa-th-large"></i> 布局设置
-                    </h5>
+        <div class="card config-section">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-th-large"></i> 布局设置
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="form-group-inline">
+                    <div>
+                        <label for="maxGroupColumns" class="form-label">最大分组列数</label>
+                        <select class="form-select form-select-sm" id="maxGroupColumns" name="maxGroupColumns">
+                            {% for i in range(1, 9) %}
+                                <option value="{{ i }}" {% if settings.maxGroupColumns == i %}selected{% endif %}>{{ i }} 列</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="maxBookmarkGroupColumns" class="form-label">最大书签列数</label>
+                        <select class="form-select form-select-sm" id="maxBookmarkGroupColumns" name="maxBookmarkGroupColumns">
+                            {% for i in range(1, 9) %}
+                                <option value="{{ i }}" {% if settings.maxBookmarkGroupColumns == i %}selected{% endif %}>{{ i }} 列</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="useEqualHeights" name="useEqualHeights" 
-                                   value="true" {% if settings.useEqualHeights %}checked{% endif %}>
-                            <label class="form-check-label" for="useEqualHeights">
-                                使用等高卡片
-                            </label>
-                            <div class="form-text">让同一行的服务卡片保持相同高度</div>
-                        </div>
+                
+                <div class="mb-3">
+                    <label for="bookmarksStyle" class="form-label">书签样式</label>
+                    <select class="form-select form-select-sm" id="bookmarksStyle" name="bookmarksStyle">
+                        <option value="grid" {% if settings.bookmarksStyle == 'grid' %}selected{% endif %}>网格</option>
+                        <option value="icons" {% if settings.bookmarksStyle == 'icons' %}selected{% endif %}>仅图标</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="fullWidth" name="fullWidth" 
+                               value="true" {% if settings.fullWidth %}checked{% endif %}>
+                        <label class="form-check-label" for="fullWidth">全宽布局</label>
                     </div>
-                    
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="fiveColumns" name="fiveColumns" 
-                                   value="true" {% if settings.fiveColumns %}checked{% endif %}>
-                            <label class="form-check-label" for="fiveColumns">
-                                五列布局
-                            </label>
-                            <div class="form-text">为服务启用五列布局（默认最多四列）</div>
-                        </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="useEqualHeights" name="useEqualHeights" 
+                               value="true" {% if settings.useEqualHeights %}checked{% endif %}>
+                        <label class="form-check-label" for="useEqualHeights">等高卡片</label>
                     </div>
-                    
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="disableCollapse" name="disableCollapse" 
-                                   value="true" {% if settings.disableCollapse %}checked{% endif %}>
-                            <label class="form-check-label" for="disableCollapse">
-                                禁用折叠功能
-                            </label>
-                            <div class="form-text">禁用服务和书签的折叠功能</div>
-                        </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="fiveColumns" name="fiveColumns" 
+                               value="true" {% if settings.fiveColumns %}checked{% endif %}>
+                        <label class="form-check-label" for="fiveColumns">五列布局</label>
                     </div>
-                    
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="groupsInitiallyCollapsed" name="groupsInitiallyCollapsed" 
-                                   value="true" {% if settings.groupsInitiallyCollapsed %}checked{% endif %}>
-                            <label class="form-check-label" for="groupsInitiallyCollapsed">
-                                初始折叠分组
-                            </label>
-                            <div class="form-text">页面加载时默认折叠所有分组</div>
-                        </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 折叠设置 -->
+        <div class="card config-section">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-compress-arrows-alt"></i> 折叠设置
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="disableCollapse" name="disableCollapse" 
+                               value="true" {% if settings.disableCollapse %}checked{% endif %}>
+                        <label class="form-check-label" for="disableCollapse">
+                            禁用折叠功能
+                        </label>
+                        <div class="form-text">禁用服务和书签的折叠功能</div>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="groupsInitiallyCollapsed" name="groupsInitiallyCollapsed" 
+                               value="true" {% if settings.groupsInitiallyCollapsed %}checked{% endif %}>
+                        <label class="form-check-label" for="groupsInitiallyCollapsed">
+                            初始折叠分组
+                        </label>
+                        <div class="form-text">页面加载时默认折叠所有分组</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 快速启动设置 -->
+        <div class="card config-section">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="fas fa-search"></i> 快速启动设置
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label for="quicklaunchProvider" class="form-label">搜索提供商</label>
+                    <select class="form-select form-select-sm" id="quicklaunchProvider" name="quicklaunchProvider">
+                        <option value="baidu" {% if settings.quicklaunch is defined and settings.quicklaunch.provider == 'baidu' %}selected{% endif %}>百度</option>
+                        <option value="google" {% if settings.quicklaunch is defined and settings.quicklaunch.provider == 'google' %}selected{% endif %}>Google</option>
+                        <option value="duckduckgo" {% if settings.quicklaunch is defined and settings.quicklaunch.provider == 'duckduckgo' %}selected{% endif %}>DuckDuckGo</option>
+                        <option value="bing" {% if settings.quicklaunch is defined and settings.quicklaunch.provider == 'bing' %}selected{% endif %}>Bing</option>
+                        <option value="brave" {% if settings.quicklaunch is defined and settings.quicklaunch.provider == 'brave' %}selected{% endif %}>Brave</option>
+                        <option value="custom" {% if settings.quicklaunch is defined and settings.quicklaunch.provider == 'custom' %}selected{% endif %}>自定义</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="quicklaunchSearchDescriptions" name="quicklaunchSearchDescriptions" 
+                               value="true" {% if settings.quicklaunch is defined and settings.quicklaunch.searchDescriptions %}checked{% endif %}>
+                        <label class="form-check-label" for="quicklaunchSearchDescriptions">搜索描述</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="quicklaunchHideInternetSearch" name="quicklaunchHideInternetSearch" 
+                               value="true" {% if settings.quicklaunch is defined and settings.quicklaunch.hideInternetSearch %}checked{% endif %}>
+                        <label class="form-check-label" for="quicklaunchHideInternetSearch">隐藏网络搜索</label>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="quicklaunchShowSearchSuggestions" name="quicklaunchShowSearchSuggestions" 
+                               value="true" {% if settings.quicklaunch is defined and settings.quicklaunch.showSearchSuggestions %}checked{% endif %}>
+                        <label class="form-check-label" for="quicklaunchShowSearchSuggestions">显示搜索建议</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="checkbox" id="quicklaunchHideVisitURL" name="quicklaunchHideVisitURL" 
+                               value="true" {% if settings.quicklaunch is defined and settings.quicklaunch.hideVisitURL %}checked{% endif %}>
+                        <label class="form-check-label" for="quicklaunchHideVisitURL">隐藏访问 URL</label>
                     </div>
                 </div>
             </div>
         </div>
     </div>
     
-    <div class="row">
+    <!-- 高级设置说明 -->
+    <div class="row mt-3">
+        <div class="col-md-12">
+            <div class="card config-section">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-cogs"></i> 高级设置
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-0">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>注意：</strong> 复杂配置项（如 providers、自定义布局、背景滤镜、分组图标等）请使用 
+                        <a href="{{ url_for('yaml_editor') }}" class="alert-link">YAML 编辑器</a> 进行配置。
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 操作按钮 -->
+    <div class="row mt-3">
         <div class="col-md-12">
             <div class="card">
-                <div class="card-body">
+                <div class="card-body py-2">
                     <div class="d-flex justify-content-between">
                         <div>
-                            <button type="button" class="btn btn-outline-secondary" onclick="window.history.back()">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="window.history.back()">
                                 <i class="fas fa-arrow-left"></i> 返回
                             </button>
                         </div>
                         <div>
-                            <button type="submit" class="btn btn-primary">
+                            <a href="{{ url_for('yaml_editor') }}" class="btn btn-outline-info btn-sm me-2">
+                                <i class="fas fa-code"></i> YAML 编辑器
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-sm">
                                 <i class="fas fa-save"></i> 保存设置
                             </button>
                         </div>
@@ -310,6 +506,10 @@
         const startUrl = document.getElementById('startUrl').value;
         const base = document.getElementById('base').value;
         const favicon = document.getElementById('favicon').value;
+        const background = document.getElementById('background').value;
+        const logpath = document.getElementById('logpath').value;
+        const maxGroupColumns = parseInt(document.getElementById('maxGroupColumns').value);
+        const maxBookmarkGroupColumns = parseInt(document.getElementById('maxBookmarkGroupColumns').value);
         
         // 验证 URL 格式
         const urlPattern = /^(https?:\/\/)|(\/)/;
@@ -328,6 +528,32 @@
         
         if (startUrl && !startUrl.startsWith('/') && !urlPattern.test(startUrl)) {
             alert('起始 URL 必须以 http://, https:// 或 / 开头');
+            e.preventDefault();
+            return;
+        }
+        
+        if (background && !background.startsWith('/') && !urlPattern.test(background)) {
+            alert('背景图片 URL 必须以 http://, https:// 或 / 开头');
+            e.preventDefault();
+            return;
+        }
+        
+        // 验证列数范围
+        if (maxGroupColumns < 1 || maxGroupColumns > 8) {
+            alert('最大分组列数必须在 1-8 之间');
+            e.preventDefault();
+            return;
+        }
+        
+        if (maxBookmarkGroupColumns < 1 || maxBookmarkGroupColumns > 8) {
+            alert('最大书签分组列数必须在 1-8 之间');
+            e.preventDefault();
+            return;
+        }
+        
+        // 验证路径格式
+        if (logpath && !logpath.startsWith('/')) {
+            alert('日志路径必须以 / 开头');
             e.preventDefault();
             return;
         }

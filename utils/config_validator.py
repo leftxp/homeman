@@ -36,6 +36,17 @@ class ConfigValidator:
             'ca', 'de', 'en', 'es', 'fr', 'he', 'hr', 'hu', 'it', 
             'nb-NO', 'nl', 'pt', 'ru', 'sv', 'vi', 'zh-CN', 'zh-Hant'
         ]
+        
+        # 支持的书签样式
+        self.valid_bookmark_styles = ['grid', 'icons']
+        
+        # 支持的卡片模糊效果
+        self.valid_card_blur = ['', 'xs', 'sm', 'md', 'lg', 'xl', '2xl', '3xl']
+        
+        # 支持的快速启动提供商
+        self.valid_quicklaunch_providers = [
+            'google', 'duckduckgo', 'bing', 'baidu', 'brave', 'custom'
+        ]
     
     def validate_settings(self, settings: Dict[str, Any]) -> Tuple[bool, str]:
         """验证全局设置，返回(验证结果, 错误信息)"""
@@ -84,9 +95,42 @@ class ConfigValidator:
                 logger.warning(error_msg)
                 return False, error_msg
             
+            # 验证书签样式
+            if 'bookmarksStyle' in settings and settings['bookmarksStyle'] not in self.valid_bookmark_styles:
+                error_msg = f"无效的书签样式: {settings['bookmarksStyle']}，支持的样式: {', '.join(self.valid_bookmark_styles)}"
+                logger.warning(error_msg)
+                return False, error_msg
+            
+            # 验证卡片模糊效果
+            if 'cardBlur' in settings and settings['cardBlur'] not in self.valid_card_blur:
+                error_msg = f"无效的卡片模糊效果: {settings['cardBlur']}，支持的效果: {', '.join(self.valid_card_blur)}"
+                logger.warning(error_msg)
+                return False, error_msg
+            
+            # 验证数值类型
+            if 'maxGroupColumns' in settings:
+                if not isinstance(settings['maxGroupColumns'], int) or settings['maxGroupColumns'] < 1 or settings['maxGroupColumns'] > 8:
+                    error_msg = f"最大分组列数必须是1-8之间的整数，当前值: {settings['maxGroupColumns']}"
+                    logger.warning(error_msg)
+                    return False, error_msg
+            
+            if 'maxBookmarkGroupColumns' in settings:
+                if not isinstance(settings['maxBookmarkGroupColumns'], int) or settings['maxBookmarkGroupColumns'] < 1 or settings['maxBookmarkGroupColumns'] > 8:
+                    error_msg = f"最大书签分组列数必须是1-8之间的整数，当前值: {settings['maxBookmarkGroupColumns']}"
+                    logger.warning(error_msg)
+                    return False, error_msg
+            
+            # 验证快速启动配置
+            if 'quicklaunch' in settings and isinstance(settings['quicklaunch'], dict):
+                ql_config = settings['quicklaunch']
+                if 'provider' in ql_config and ql_config['provider'] not in self.valid_quicklaunch_providers:
+                    error_msg = f"无效的快速启动提供商: {ql_config['provider']}，支持的提供商: {', '.join(self.valid_quicklaunch_providers)}"
+                    logger.warning(error_msg)
+                    return False, error_msg
+            
             # 验证布尔值
             bool_fields = ['hideVersion', 'showStats', 'useEqualHeights', 'fiveColumns', 
-                          'disableCollapse', 'groupsInitiallyCollapsed']
+                          'disableCollapse', 'groupsInitiallyCollapsed', 'fullWidth', 'hideErrors', 'disableUpdateCheck']
             for field in bool_fields:
                 if field in settings and not isinstance(settings[field], bool):
                     error_msg = f"字段 {field} 必须是布尔值，当前值: {settings[field]} ({type(settings[field]).__name__})"
@@ -112,6 +156,19 @@ class ConfigValidator:
                     error_msg = f"无效的favicon URL格式: {settings['favicon']}"
                     logger.warning(error_msg)
                     return False, error_msg
+            
+            # 验证背景图片URL
+            if 'background' in settings and settings['background']:
+                if isinstance(settings['background'], str):
+                    if not self._validate_url(settings['background']):
+                        error_msg = f"无效的背景图片URL格式: {settings['background']}"
+                        logger.warning(error_msg)
+                        return False, error_msg
+                elif isinstance(settings['background'], dict):
+                    if 'image' in settings['background'] and not self._validate_url(settings['background']['image']):
+                        error_msg = f"无效的背景图片URL格式: {settings['background']['image']}"
+                        logger.warning(error_msg)
+                        return False, error_msg
             
             logger.info("Settings validation passed")
             return True, "验证通过"

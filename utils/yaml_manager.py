@@ -95,23 +95,58 @@ class YamlManager:
     def load_settings(self) -> Dict[str, Any]:
         """加载全局设置"""
         default_settings = {
+            # 基础设置
             'title': 'Homepage',
+            'description': '',
             'startUrl': '/',
-            'theme': 'light',
-            'color': 'slate',
+            'favicon': '',
+            'base': '',
+            'language': 'zh-CN',
+            'target': '_blank',
+            'instanceName': '',
+            
+            # 外观设置
+            'theme': 'dark',
+            'color': 'blue',
             'headerStyle': 'underlined',
-            'language': 'en',
-            'hideVersion': False,
-            'showStats': False,
+            'iconStyle': 'gradient',
             'statusStyle': '',
+            
+            # 背景设置
+            'background': '',
+            'cardBlur': '',
+            
+            # 布局设置
+            'layout': {},
+            'fullWidth': False,
+            'maxGroupColumns': 4,
+            'maxBookmarkGroupColumns': 6,
             'useEqualHeights': False,
             'fiveColumns': False,
             'disableCollapse': False,
             'groupsInitiallyCollapsed': False,
-            'iconStyle': 'gradient',
-            'target': '_self',
-            'layout': {},
-            'providers': {}
+            
+            # 书签设置
+            'bookmarksStyle': 'grid',
+            
+            # 显示设置
+            'hideVersion': False,
+            'showStats': False,
+            'hideErrors': False,
+            
+            # 快速启动设置
+            'quicklaunch': {
+                'searchDescriptions': True,
+                'hideInternetSearch': False,
+                'showSearchSuggestions': True,
+                'hideVisitURL': False,
+                'provider': 'baidu'
+            },
+            
+            # 其他设置
+            'providers': {},
+            'logpath': '',
+            'disableUpdateCheck': False
         }
         
         settings = self._load_yaml_file(self.settings_file)

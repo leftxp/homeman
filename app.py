@@ -59,10 +59,45 @@ def save_settings():
         settings_data = request.form.to_dict()
         
         # 处理布尔值
-        bool_fields = ['hideVersion', 'showStats', 'useEqualHeights', 'fiveColumns', 'disableCollapse', 'groupsInitiallyCollapsed']
+        bool_fields = ['hideVersion', 'showStats', 'useEqualHeights', 'fiveColumns', 
+                      'disableCollapse', 'groupsInitiallyCollapsed', 'fullWidth', 
+                      'hideErrors', 'disableUpdateCheck']
         for field in bool_fields:
             if field in settings_data:
                 settings_data[field] = settings_data[field].lower() == 'true'
+        
+        # 处理快速启动设置
+        quicklaunch_fields = ['quicklaunchProvider', 'quicklaunchSearchDescriptions', 
+                             'quicklaunchHideInternetSearch', 'quicklaunchShowSearchSuggestions', 
+                             'quicklaunchHideVisitURL']
+        quicklaunch_data = {}
+        for field in quicklaunch_fields:
+            if field in settings_data:
+                key = field.replace('quicklaunch', '').lower()
+                if key == 'provider':
+                    quicklaunch_data[key] = settings_data[field]
+                elif key in ['searchdescriptions', 'hideinternetssearch', 'showsearchsuggestions', 'hidevisiturl']:
+                    # 处理布尔值
+                    key_map = {
+                        'searchdescriptions': 'searchDescriptions',
+                        'hideinternetssearch': 'hideInternetSearch', 
+                        'showsearchsuggestions': 'showSearchSuggestions',
+                        'hidevisiturl': 'hideVisitURL'
+                    }
+                    quicklaunch_data[key_map[key]] = settings_data[field].lower() == 'true'
+                del settings_data[field]
+        
+        if quicklaunch_data:
+            settings_data['quicklaunch'] = quicklaunch_data
+        
+        # 处理数值类型
+        numeric_fields = ['maxGroupColumns', 'maxBookmarkGroupColumns']
+        for field in numeric_fields:
+            if field in settings_data:
+                try:
+                    settings_data[field] = int(settings_data[field])
+                except ValueError:
+                    settings_data[field] = 4 if field == 'maxGroupColumns' else 6
         
         # 验证配置
         is_valid, validation_msg = validator.validate_settings(settings_data)
