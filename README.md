@@ -62,20 +62,19 @@ docker run -d \
   -p 3100:3100 \
   -v /path/to/homepage/config:/app/config \
   -e HOMEPAGE_CONFIG_PATH=/app/config \
-  homeman
+  leftxp/homeman
 ```
 
 ### 2. 使用 Docker Compose
 
 ```yaml
-version: '3.8'
 services:
   homeman:
-    image: homeman
+    image: leftxp/homeman
     ports:
       - "3100:3100"
     volumes:
-      - ./config:/app/config
+      - /path/to/homepage/config:/app/config
     environment:
       - HOMEPAGE_CONFIG_PATH=/app/config
 ```
@@ -134,7 +133,7 @@ services:
 - 创建书签分组
 - 添加书签项（支持图标和缩写）
 - 编辑和删除书签
-- 拖拽排序（计划中）
+- 拖拽排序
 
 ### 3. Docker 管理
 
@@ -152,7 +151,7 @@ services:
 - 查看配置文件状态
 - 备份配置文件
 - 下载配置信息
-- 恢复备份（计划中）
+- 恢复备份
 
 ### 5. YAML 编辑器
 
