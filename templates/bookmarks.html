@@ -5,7 +5,7 @@
 {% block extra_css %}
 <style>
     .quick-add-input {
-        width: 120px;
+        width: 180px;
         transition: width 0.3s ease;
         font-size: 0.85rem;
         height: 32px;
@@ -104,6 +104,59 @@
     .bookmark-content .mb-2:last-child {
         margin-bottom: 0; /* 移除最后元素的下边距 */
     }
+    
+    /* 可编辑分组标题样式 */
+    .group-title-editable {
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+        transition: background-color 0.2s ease;
+        position: relative;
+    }
+    
+    .group-title-editable:hover {
+        background-color: rgba(0, 123, 255, 0.1);
+        color: #0d6efd;
+    }
+    
+    .group-title-editable:hover::after {
+        content: " ✏️";
+        font-size: 0.8rem;
+        opacity: 0.7;
+    }
+    
+    .group-title-editing {
+        background-color: rgba(255, 255, 255, 0.9);
+        border: 2px solid #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .group-title-input {
+        border: none;
+        outline: none;
+        background: transparent;
+        font-size: inherit;
+        font-weight: inherit;
+        color: inherit;
+        width: 100%;
+        padding: 0;
+        margin: 0;
+        height: auto;
+        line-height: inherit;
+        white-space: nowrap;
+        overflow: hidden;
+        resize: none;
+    }
+    
+    /* 编辑状态时隐藏hover效果和铅笔图标 */
+    .group-title-editing:hover::after {
+        display: none;
+    }
+    
+    .group-title-editing:hover {
+        background-color: rgba(255, 255, 255, 0.9);
+        color: inherit;
+    }
 </style>
 {% endblock %}
 
@@ -141,7 +194,10 @@
                                     <div class="group-header d-flex justify-content-between align-items-center mb-2 py-2 px-3">
                                         <div class="d-flex align-items-center flex-grow-1">
                                             <i class="fas fa-grip-vertical text-muted me-2 group-handle" style="cursor: grab;"></i>
-                                            <h5 class="mb-0 me-3">{{ group_name }}</h5>
+                                            <h5 class="mb-0 me-3 group-title-editable" 
+                                               data-group="{{ group_name }}" 
+                                               onclick="startEditGroupName(this)"
+                                               title="点击修改分组名称">{{ group_name }}</h5>
                                             
                                             <!-- 快速添加输入框 -->
                                             <div class="quick-add-container">
@@ -160,9 +216,6 @@
                                         <div class="btn-group">
                                             <button class="btn btn-sm btn-outline-primary" onclick="showAddBookmarkModal('{{ group_name }}')" title="详细添加">
                                                 <i class="fas fa-plus"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-warning" onclick="editGroup('{{ group_name }}')" title="编辑分组">
-                                                <i class="fas fa-edit"></i>
                                             </button>
                                             <button class="btn btn-sm btn-outline-danger" onclick="deleteGroup('{{ group_name }}')" title="删除分组">
                                                 <i class="fas fa-trash"></i>
@@ -644,6 +697,176 @@
         document.getElementById('groupName').value = groupName;
         new bootstrap.Modal(document.getElementById('groupModal')).show();
         setTimeout(() => document.getElementById('groupName').focus(), 100);
+    }
+
+    // 新增：直接编辑分组名称功能
+    function startEditGroupName(element) {
+        const currentName = element.textContent.trim();
+        const originalName = element.dataset.group;
+        
+        // 防止重复编辑
+        if (element.querySelector('.group-title-input')) {
+            return;
+        }
+        
+        // 创建输入框
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = currentName;
+        input.className = 'group-title-input';
+        input.setAttribute('data-original-name', originalName);
+        input.setAttribute('autocomplete', 'off');
+        input.setAttribute('spellcheck', 'false');
+        
+        // 防止换行和多行
+        input.style.minHeight = 'auto';
+        input.style.maxHeight = 'none';
+        input.style.height = 'auto';
+        input.style.display = 'inline-block';
+        
+        // 添加编辑状态样式
+        element.classList.add('group-title-editing');
+        
+        // 清空元素内容并添加输入框
+        element.textContent = '';
+        element.appendChild(input);
+        
+        // 选中输入框文本
+        input.focus();
+        input.select();
+        
+        // 添加取消标志
+        let isCancelled = false;
+        
+        // 绑定事件
+        input.addEventListener('blur', () => {
+            if (!isCancelled) {
+                finishEditGroupName(element, input);
+            }
+        });
+        
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                finishEditGroupName(element, input);
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                isCancelled = true;
+                cancelEditGroupName(element, input, originalName);
+            }
+        });
+        
+        // 防止输入框出现多行或换行行为
+        input.addEventListener('input', (e) => {
+            // 移除任何换行符
+            input.value = input.value.replace(/\n/g, '');
+        });
+        
+        input.addEventListener('paste', (e) => {
+            // 处理粘贴内容，移除换行符
+            setTimeout(() => {
+                input.value = input.value.replace(/\n/g, '');
+            }, 0);
+        });
+        
+        // 阻止事件冒泡，防止触发其他点击事件
+        input.addEventListener('click', (e) => e.stopPropagation());
+    }
+    
+    function finishEditGroupName(element, input) {
+        const newName = input.value.trim();
+        const originalName = input.getAttribute('data-original-name');
+        
+        if (!newName) {
+            showError('分组名称不能为空');
+            input.focus();
+            return;
+        }
+        
+        // 检查是否有重名分组
+        const existingGroup = bookmarksData.find(group => {
+            const groupName = Object.keys(group)[0];
+            return groupName === newName && groupName !== originalName;
+        });
+        
+        if (existingGroup) {
+            showError('分组名称已存在');
+            input.focus();
+            return;
+        }
+        
+        // 如果名称没有变化，直接取消编辑
+        if (newName === originalName) {
+            cancelEditGroupName(element, input, originalName);
+            return;
+        }
+        
+        // 更新数据
+        const groupIndex = bookmarksData.findIndex(group => Object.keys(group)[0] === originalName);
+        if (groupIndex !== -1) {
+            const groupItems = bookmarksData[groupIndex][originalName];
+            bookmarksData[groupIndex] = { [newName]: groupItems };
+            
+            // 更新UI
+            element.classList.remove('group-title-editing');
+            element.textContent = newName;
+            element.dataset.group = newName;
+            
+            // 更新相关的data-group属性
+            updateGroupReferences(originalName, newName);
+            
+            // 保存到服务器
+            saveBookmarks();
+            
+            showSuccess(`分组名称已更改为"${newName}"`);
+        } else {
+            showError('分组不存在');
+            cancelEditGroupName(element, input, originalName);
+        }
+    }
+    
+    function cancelEditGroupName(element, input, originalName) {
+        element.classList.remove('group-title-editing');
+        element.textContent = originalName;
+    }
+    
+    function updateGroupReferences(oldName, newName) {
+        // 更新bookmark-group容器的data-group
+        const groupContainer = document.querySelector(`[data-group="${oldName}"]`);
+        if (groupContainer) {
+            groupContainer.dataset.group = newName;
+        }
+        
+        // 更新bookmark-items容器的data-group
+        const itemsContainer = document.querySelector(`.bookmark-items[data-group="${oldName}"]`);
+        if (itemsContainer) {
+            itemsContainer.dataset.group = newName;
+        }
+        
+        // 更新快速添加输入框的data-group
+        const quickAddInput = document.querySelector(`input[data-group="${oldName}"]`);
+        if (quickAddInput) {
+            quickAddInput.dataset.group = newName;
+            quickAddInput.setAttribute('onkeypress', `handleQuickAddKeypress(event, '${newName}')`);
+            quickAddInput.setAttribute('onblur', `handleQuickAddBlur(event, '${newName}')`);
+        }
+        
+        // 更新书签卡片的data-group
+        const bookmarkCards = document.querySelectorAll(`[data-group="${oldName}"]`);
+        bookmarkCards.forEach(card => {
+            card.dataset.group = newName;
+        });
+        
+        // 更新按钮的onclick属性
+        const addBookmarkBtn = document.querySelector(`button[onclick="showAddBookmarkModal('${oldName}')"]`);
+        if (addBookmarkBtn) {
+            addBookmarkBtn.setAttribute('onclick', `showAddBookmarkModal('${newName}')`);
+        }
+        
+        const deleteGroupBtn = document.querySelector(`button[onclick="deleteGroup('${oldName}')"]`);
+        if (deleteGroupBtn) {
+            deleteGroupBtn.setAttribute('onclick', `deleteGroup('${newName}')`);
+        }
     }
 
     function saveGroup(event) {

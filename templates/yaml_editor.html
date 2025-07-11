@@ -449,9 +449,12 @@ function saveConfig() {
     }
 
     const content = editor.getValue();
+    
+    // 如果内容为空，确认用户是否真的要保存空文件
     if (!content.trim()) {
-        showMessage('配置内容不能为空', 'warning');
-        return;
+        if (!confirm('您正在保存空的配置文件，这将清空该配置的所有内容。\n\n确定要继续吗？')) {
+            return;
+        }
     }
 
     fetch(`/api/yaml/save/${currentConfigType}`, {

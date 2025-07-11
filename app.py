@@ -2,6 +2,11 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 import os
 from utils.yaml_manager import YamlManager
 from utils.config_validator import ConfigValidator
+import logging
+
+# 配置日志
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 app.secret_key = 'homeman-secret-key-change-in-production'
@@ -13,44 +18,112 @@ HOMEPAGE_CONFIG_PATH = os.getenv('HOMEPAGE_CONFIG_PATH', '/app/config')
 yaml_manager = YamlManager(HOMEPAGE_CONFIG_PATH)
 validator = ConfigValidator()
 
+def safe_calculate_stats(settings_data, bookmarks_data, services_data, widgets_data, docker_data):
+    """安全地计算统计信息，避免空数据或格式错误导致的崩溃"""
+    stats = {
+        'bookmarks_count': 0,
+        'bookmarks_groups': 0,
+        'services_count': 0,
+        'services_groups': 0,
+        'widgets_count': 0,
+        'docker_instances': 0,
+        'configured_settings': 0
+    }
+    
+    try:
+        # 计算书签统计
+        if isinstance(bookmarks_data, list):
+            stats['bookmarks_groups'] = len(bookmarks_data)
+            for group in bookmarks_data:
+                if isinstance(group, dict) and group:
+                    group_name = list(group.keys())[0]
+                    if group_name in group and isinstance(group[group_name], list):
+                        stats['bookmarks_count'] += len(group[group_name])
+        
+        # 计算服务统计
+        if isinstance(services_data, list):
+            stats['services_groups'] = len(services_data)
+            for group in services_data:
+                if isinstance(group, dict) and group:
+                    group_name = list(group.keys())[0]
+                    if group_name in group and isinstance(group[group_name], list):
+                        stats['services_count'] += len(group[group_name])
+        
+        # 计算小工具统计
+        if isinstance(widgets_data, dict):
+            stats['widgets_count'] = len(widgets_data)
+        
+        # 计算 Docker 实例统计
+        if isinstance(docker_data, dict):
+            stats['docker_instances'] = len(docker_data)
+        
+        # 计算已配置的设置项
+        if isinstance(settings_data, dict):
+            stats['configured_settings'] = len([k for k, v in settings_data.items() 
+                                              if v not in ['', None, False]])
+    
+    except Exception as e:
+        logger.error(f"计算统计信息时发生错误: {e}")
+        # 如果计算出错，返回默认的零值统计
+    
+    return stats
+
+def handle_page_error(error_msg, template_name, **template_vars):
+    """处理页面错误，显示错误信息并渲染模板"""
+    logger.error(f"页面错误: {error_msg}")
+    template_vars['error_message'] = f"加载配置时发生错误: {error_msg}"
+    return render_template(template_name, **template_vars)
+
 @app.route('/')
 def index():
     """主页 - 显示配置概览"""
-    # 获取配置状态
-    config_status = yaml_manager.get_config_status()
+    try:
+        # 获取配置状态
+        config_status = yaml_manager.get_config_status()
+        
+        # 获取配置数据
+        settings_data = yaml_manager.load_settings()
+        bookmarks_data = yaml_manager.load_bookmarks()
+        services_data = yaml_manager.load_services()
+        widgets_data = yaml_manager.load_widgets()
+        docker_data = yaml_manager.load_docker()
+        
+        # 安全地计算统计信息
+        stats = safe_calculate_stats(settings_data, bookmarks_data, services_data, widgets_data, docker_data)
+        
+        # 获取最近备份
+        recent_backups = yaml_manager.list_backups()[:3]  # 最近3个备份
+        
+        return render_template('index.html', 
+                             config_status=config_status, 
+                             stats=stats, 
+                             recent_backups=recent_backups,
+                             settings=settings_data)
     
-    # 获取配置统计
-    settings_data = yaml_manager.load_settings()
-    bookmarks_data = yaml_manager.load_bookmarks()
-    services_data = yaml_manager.load_services()
-    widgets_data = yaml_manager.load_widgets()
-    docker_data = yaml_manager.load_docker()
-    
-    # 计算统计信息
-    stats = {
-        'bookmarks_count': sum(len(group[list(group.keys())[0]]) for group in bookmarks_data),
-        'bookmarks_groups': len(bookmarks_data),
-        'services_count': sum(len(group[list(group.keys())[0]]) for group in services_data),
-        'services_groups': len(services_data),
-        'widgets_count': len(widgets_data),
-        'docker_instances': len(docker_data),
-        'configured_settings': len([k for k, v in settings_data.items() if v not in ['', None, False]])
-    }
-    
-    # 获取最近备份
-    recent_backups = yaml_manager.list_backups()[:3]  # 最近3个备份
-    
-    return render_template('index.html', 
-                         config_status=config_status, 
-                         stats=stats, 
-                         recent_backups=recent_backups,
-                         settings=settings_data)
+    except Exception as e:
+        # 如果发生任何错误，返回带错误信息的空页面
+        return handle_page_error(str(e), 'index.html', 
+                               config_status={}, 
+                               stats={
+                                   'bookmarks_count': 0,
+                                   'bookmarks_groups': 0,
+                                   'services_count': 0,
+                                   'services_groups': 0,
+                                   'widgets_count': 0,
+                                   'docker_instances': 0,
+                                   'configured_settings': 0
+                               }, 
+                               recent_backups=[],
+                               settings={})
 
 @app.route('/settings')
 def settings():
     """全局设置页面"""
-    settings_data = yaml_manager.load_settings()
-    return render_template('settings.html', settings=settings_data)
+    try:
+        settings_data = yaml_manager.load_settings()
+        return render_template('settings.html', settings=settings_data)
+    except Exception as e:
+        return handle_page_error(str(e), 'settings.html', settings={})
 
 @app.route('/settings', methods=['POST'])
 def save_settings():
@@ -118,8 +191,11 @@ def save_settings():
 @app.route('/bookmarks')
 def bookmarks():
     """书签管理页面"""
-    bookmarks_data = yaml_manager.load_bookmarks()
-    return render_template('bookmarks.html', bookmarks=bookmarks_data)
+    try:
+        bookmarks_data = yaml_manager.load_bookmarks()
+        return render_template('bookmarks.html', bookmarks=bookmarks_data)
+    except Exception as e:
+        return handle_page_error(str(e), 'bookmarks.html', bookmarks=[])
 
 @app.route('/bookmarks', methods=['POST'])
 def save_bookmarks():
@@ -144,9 +220,12 @@ def save_bookmarks():
 @app.route('/services')
 def services():
     """服务管理页面"""
-    services_data = yaml_manager.load_services()
-    docker_data = yaml_manager.load_docker()
-    return render_template('services.html', services=services_data, docker_config=docker_data)
+    try:
+        services_data = yaml_manager.load_services()
+        docker_data = yaml_manager.load_docker()
+        return render_template('services.html', services=services_data, docker_config=docker_data)
+    except Exception as e:
+        return handle_page_error(str(e), 'services.html', services=[], docker_config={})
 
 @app.route('/api/services', methods=['POST'])
 def save_services():
@@ -284,8 +363,11 @@ def delete_service_group():
 @app.route('/docker')
 def docker():
     """Docker 管理页面"""
-    docker_data = yaml_manager.load_docker()
-    return render_template('docker.html', docker_config=docker_data)
+    try:
+        docker_data = yaml_manager.load_docker()
+        return render_template('docker.html', docker_config=docker_data)
+    except Exception as e:
+        return handle_page_error(str(e), 'docker.html', docker_config={})
 
 @app.route('/api/docker', methods=['POST'])
 def save_docker():
@@ -362,8 +444,11 @@ def test_docker_connection(instance_name):
 @app.route('/widgets')
 def widgets():
     """小工具管理页面"""
-    widgets_data = yaml_manager.load_widgets()
-    return render_template('widgets.html', widgets=widgets_data)
+    try:
+        widgets_data = yaml_manager.load_widgets()
+        return render_template('widgets.html', widgets=widgets_data)
+    except Exception as e:
+        return handle_page_error(str(e), 'widgets.html', widgets={})
 
 @app.route('/api/widgets', methods=['POST'])
 def save_widgets():
@@ -472,8 +557,11 @@ def test_widget(widget_name):
 @app.route('/config')
 def config():
     """配置文件管理页面"""
-    config_status = yaml_manager.get_config_status()
-    return render_template('config.html', status=config_status)
+    try:
+        config_status = yaml_manager.get_config_status()
+        return render_template('config.html', status=config_status)
+    except Exception as e:
+        return handle_page_error(str(e), 'config.html', status={})
 
 @app.route('/api/backup', methods=['GET', 'POST'])
 def backup_config():
@@ -574,11 +662,16 @@ def download_backup(backup_name):
 @app.route('/yaml-editor')
 def yaml_editor():
     """YAML 编辑器页面"""
-    config_types = yaml_manager.get_supported_config_types()
-    config_status = yaml_manager.get_config_status()
-    return render_template('yaml_editor.html', 
-                         config_types=config_types, 
-                         config_status=config_status)
+    try:
+        config_types = yaml_manager.get_supported_config_types()
+        config_status = yaml_manager.get_config_status()
+        return render_template('yaml_editor.html', 
+                             config_types=config_types, 
+                             config_status=config_status)
+    except Exception as e:
+        return handle_page_error(str(e), 'yaml_editor.html', 
+                               config_types=[], 
+                               config_status={})
 
 @app.route('/api/yaml/load/<config_name>')
 def load_yaml_content(config_name):
@@ -610,8 +703,7 @@ def save_yaml_content(config_name):
         request_data = request.get_json()
         content = request_data.get('content', '')
         
-        if not content.strip():
-            return jsonify({'success': False, 'error': '文件内容不能为空'}), 400
+        # 允许保存空文件，空文件在某些情况下是有意义的（如清空配置）
         
         # 保存文件
         success, save_msg = yaml_manager.save_raw_yaml_file(config_name, content)
