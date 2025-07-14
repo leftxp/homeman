@@ -8,7 +8,7 @@
     <div class="col-md-12">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1><i class="fas fa-dashboard"></i> 欢迎使用 Homeman</h1>
+                <h1 class="h3 mb-0"><i class="fas fa-dashboard"></i> 欢迎使用 Homeman</h1>
                 <p class="text-muted mb-0">
                     {% if settings.title %}
                         当前配置：{{ settings.title }}
@@ -288,25 +288,9 @@
         window.open(`/api/download/backup/${backupName}`, '_blank');
     }
 
-    async function restoreBackup(backupName) {
-        const confirmed = await confirmAction(
-            `确定要恢复备份 "${backupName}" 吗？这将覆盖当前所有配置文件。`,
-            '恢复备份'
-        );
-        
-        if (confirmed) {
-            try {
-                await apiRequest('/api/restore', {
-                    method: 'POST',
-                    body: JSON.stringify({ backup_name: backupName })
-                });
-                
-                showSuccess('配置恢复成功！页面将自动刷新。');
-                setTimeout(() => location.reload(), 2000);
-            } catch (error) {
-                showError('恢复失败: ' + error.message);
-            }
-        }
-    }
-</script>
+<!-- 统计数据传递 -->
+<script type="application/json" id="stats-data">{{ stats | tojson | safe }}</script>
+
+<!-- 主页专用脚本 -->
+<script src="{{ url_for('static', filename='js/index.js') }}"></script>
 {% endblock %} 
