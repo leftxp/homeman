@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>书签功能测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #17a2b8; }
+    </style>
+</head>
+<body>
+    <h1>Homeman 书签功能测试</h1>
+    
+    <div class="test-section">
+        <h2>🧪 功能测试指南</h2>
+        <p>请在浏览器中访问 <strong>http://localhost:3100/bookmarks</strong> 并测试以下功能：</p>
+        
+        <h3>✅ 快速添加功能测试</h3>
+        <ol>
+            <li>在任意分组的输入框中输入网址（如：github.com）</li>
+            <li>按回车键</li>
+            <li><span class="success">✓ 应该看到书签立即添加到页面上</span></li>
+            <li><span class="success">✓ 应该显示成功提示消息</span></li>
+            <li><span class="success">✓ 输入框应该清空</span></li>
+        </ol>
+        
+        <h3>✅ 拖拽功能测试</h3>
+        <ol>
+            <li><strong>分组拖拽</strong>：抓住分组左边的 <code>⋮⋮</code> 图标拖动分组</li>
+            <li><strong>书签拖拽</strong>：抓住书签标题区域拖动书签</li>
+            <li><span class="success">✓ 应该能在同一分组内移动书签</span></li>
+            <li><span class="success">✓ 应该能将书签移动到其他分组</span></li>
+            <li><span class="success">✓ 拖拽后应该自动保存</span></li>
+        </ol>
+        
+        <h3>✅ 其他功能测试</h3>
+        <ul>
+            <li><span class="info">添加分组</span>：点击"添加分组"按钮</li>
+            <li><span class="info">编辑分组名</span>：点击分组标题</li>
+            <li><span class="info">详细添加书签</span>：点击分组中的"+"按钮</li>
+            <li><span class="info">编辑书签</span>：悬停书签后点击编辑按钮</li>
+            <li><span class="info">多选删除</span>：点击"多选模式"按钮</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>🔧 故障排除</h2>
+        <p><strong>如果功能仍然不工作，请检查：</strong></p>
+        <ol>
+            <li>打开浏览器开发者工具（F12）</li>
+            <li>查看控制台（Console）标签页</li>
+            <li>查看是否有JavaScript错误信息</li>
+            <li>检查是否有网络请求失败</li>
+        </ol>
+        
+        <h3>预期的控制台输出：</h3>
+        <pre style="background: #f8f9fa; padding: 10px; border-radius: 4px;">
+DOM loaded, initializing bookmarks page...
+Initializing bookmarks page...
+Bookmarks data loaded: X groups
+Drag and drop initialized successfully
+Bookmarks page initialized successfully
+        </pre>
+    </div>
+    
+    <div class="test-section">
+        <h2>📝 测试记录</h2>
+        <p>请测试每个功能并记录结果：</p>
+        <ul>
+            <li>□ 快速添加功能正常</li>
+            <li>□ 分组拖拽功能正常</li>
+            <li>□ 书签拖拽功能正常</li>
+            <li>□ 提示消息显示正常</li>
+            <li>□ 数据保存正常</li>
+        </ul>
+    </div>
+    
+    <script>
+        // 简单的功能检查
+        window.addEventListener('load', function() {
+            console.log('测试页面加载完成');
+            
+            // 检查当前URL
+            const currentUrl = window.location.href;
+            if (!currentUrl.includes('localhost:3100')) {
+                document.body.innerHTML += `
+                    <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin: 20px 0; border-radius: 5px;">
+                        <strong>注意：</strong> 请确保在正确的端口访问应用。
+                        <br>当前地址：${currentUrl}
+                        <br>应该访问：<a href="http://localhost:3100/bookmarks">http://localhost:3100/bookmarks</a>
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html> 
